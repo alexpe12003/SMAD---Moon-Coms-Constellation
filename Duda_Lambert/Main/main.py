@@ -31,7 +31,7 @@ def get_body_position(body, ts, eph, date):
 def main():
 	# User input: departure date and time of flight (in days)
 	departure_str = "2025-09-21"  # input("Enter departure date (YYYY-MM-DD): ")
-	tof_days = 3  # float(input("Enter time of flight in days: "))
+	tof_days = 10  # float(input("Enter time of flight in days: "))
 	departure_date = datetime.strptime(departure_str, "%Y-%m-%d")
 	arrival_date = departure_date + timedelta(days=tof_days)
 
@@ -73,7 +73,44 @@ def main():
 	V1_geo, V2_geo, theta1_lambert, theta2_lambert = lambert(R_earth_geo, R_moon_geo, t_sec, string='pro', mu=mu_earth)
 	print("\nGeocentric Lambert solution (parking orbit):")
 	print("Initial velocity (km/s):", V1_geo)
+	print("Initial velocity magnitude (km/s):", np.linalg.norm(V1_geo))
 	print("Final velocity (km/s):", V2_geo)
+	print("Final velocity magnitude (km/s):", np.linalg.norm(V2_geo))
+	
+	# Calculate delta-V requirements
+	# 1. Circular parking orbit velocity at departure
+	V_parking_circular = np.sqrt(mu_earth / R_parking)  # Circular velocity at parking orbit
+	V_parking_vector = V_parking_circular * np.array([-perpendicular_direction[1], perpendicular_direction[0], 0])  # Tangential velocity
+	
+	# 2. Delta-V at departure (parking orbit to transfer orbit)
+	delta_V1 = V1_geo - V_parking_vector
+	delta_V1_magnitude = np.linalg.norm(delta_V1)
+	
+	# 3. Moon's orbital velocity (for reference at arrival)
+	# Assuming Moon is in circular orbit around Earth (approximation)
+	R_moon_distance = np.linalg.norm(R_moon_geo)
+	V_moon_circular = np.sqrt(mu_earth / R_moon_distance)
+	# Moon velocity vector (perpendicular to position vector)
+	moon_unit = R_moon_geo / R_moon_distance
+	V_moon_vector = V_moon_circular * np.array([-moon_unit[1], moon_unit[0], 0])
+	
+	# 4. Delta-V at arrival (transfer orbit to Moon orbit)
+	delta_V2 = V2_geo - V_moon_vector
+	delta_V2_magnitude = np.linalg.norm(delta_V2)
+	
+	# Total delta-V
+	total_delta_V = delta_V1_magnitude + delta_V2_magnitude
+	
+	print("\n=== DELTA-V ANALYSIS ===")
+	print(f"Parking orbit circular velocity: {V_parking_circular:.3f} km/s")
+	print(f"Parking orbit velocity vector: [{V_parking_vector[0]:.3f}, {V_parking_vector[1]:.3f}, {V_parking_vector[2]:.3f}] km/s")
+	print(f"Moon orbital velocity (circular approx): {V_moon_circular:.3f} km/s")
+	print(f"Moon velocity vector: [{V_moon_vector[0]:.3f}, {V_moon_vector[1]:.3f}, {V_moon_vector[2]:.3f}] km/s")
+	print(f"\nDelta-V at departure: {delta_V1_magnitude:.3f} km/s")
+	print(f"Delta-V vector at departure: [{delta_V1[0]:.3f}, {delta_V1[1]:.3f}, {delta_V1[2]:.3f}] km/s")
+	print(f"Delta-V at arrival: {delta_V2_magnitude:.3f} km/s")
+	print(f"Delta-V vector at arrival: [{delta_V2[0]:.3f}, {delta_V2[1]:.3f}, {delta_V2[2]:.3f}] km/s")
+	print(f"\nTOTAL DELTA-V: {total_delta_V:.3f} km/s")
 
 	# Classical Orbital Elements from state vector
 	coe = coe_from_sv(R_earth_geo, V1_geo, mu_earth)
