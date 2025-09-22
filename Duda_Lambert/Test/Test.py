@@ -78,4 +78,4 @@ if aux_path not in sys.path:
 from coe_sv import coe_from_sv
 
 coe_lambert = coe_from_sv(R1, V1_lambert, mu)
-print(f"Lambert Orbit: e: {coe_lambert[1]:.4f}a (km): {coe_lambert[6]:.2f}, ")
+print(f"Lambert Orbit: e: {coe_lambert[1]:.4f}, a (km): {coe_lambert[6]:.2f}, ")

@@ -47,8 +47,11 @@ def main():
 	R_earth_radius = 6378.0  # km
 	parking_altitude = 200.0  # km (change as needed)
 	R_parking = R_earth_radius + parking_altitude
-	R_earth_geo = np.array([R_parking, 0, 0.0])  # Parking orbit position (x-axis)
 	R_moon_geo = R_moon_helio - R_earth_helio  # Moon's position relative to Earth's center
+	
+	# Position parking orbit behind Earth relative to Moon direction
+	moon_direction = R_moon_geo / np.linalg.norm(R_moon_geo)  # Unit vector towards Moon
+	R_earth_geo = -R_parking * moon_direction  # Parking orbit behind Earth, opposite to Moon
 
 	# Time of flight in seconds
 	t_sec = tof_days * 24 * 3600
@@ -59,7 +62,7 @@ def main():
 	print("Geocentric Earth position at departure (km):", R_earth_geo)
 	print("Geocentric Moon position at arrival (km):", R_moon_geo)
 
-	V1_geo, V2_geo = lambert(R_earth_geo, R_moon_geo, t_sec, string='pro', mu=mu_earth)
+	V1_geo, V2_geo, theta1_lambert, theta2_lambert = lambert(R_earth_geo, R_moon_geo, t_sec, string='pro', mu=mu_earth)
 	print("\nGeocentric Lambert solution (parking orbit):")
 	print("Initial velocity (km/s):", V1_geo)
 	print("Final velocity (km/s):", V2_geo)
