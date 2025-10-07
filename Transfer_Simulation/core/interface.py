@@ -2,7 +2,10 @@
 User interface and input/output functions for lunar transfer analysis
 """
 
-from config import *
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from core.config import *
 
 
 def get_user_input():

@@ -9,10 +9,10 @@ import math
 import traceback
 
 # Add the current directory to Python path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import the transfer functions
-from Transfer import lunar_trajectory_calculations, lunar_soi_calculations, hyperbolic_to_elliptical_conversion
+from legacy.Transfer import lunar_trajectory_calculations, lunar_soi_calculations, hyperbolic_to_elliptical_conversion
 
 def test_lambda1_range():
     """Test lambda1 values from 290-335 degrees to identify failure points"""

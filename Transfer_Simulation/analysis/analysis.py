@@ -3,10 +3,13 @@ Analysis and optimization functions for lunar transfer missions
 """
 
 import numpy as np
-from config import *
-from earth_operations import calculate_earth_departure_delta_v
-from trajectory_calculations import lunar_trajectory_calculations
-from lunar_operations import lunar_soi_calculations, calculate_lunar_soi_transit_time, hyperbolic_to_elliptical_conversion
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from core.config import *
+from operations.earth_operations import calculate_earth_departure_delta_v
+from operations.trajectory_calculations import lunar_trajectory_calculations
+from operations.lunar_operations import lunar_soi_calculations, calculate_lunar_soi_transit_time, hyperbolic_to_elliptical_conversion
 
 
 def parametric_study_lambda1():

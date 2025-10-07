@@ -3,7 +3,10 @@ Lunar-related calculations for transfer missions
 """
 
 import math
-from config import *
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from core.config import *
 
 
 def calculate_lunar_soi_transit_time(lunar_results, verbose=True):

@@ -7,13 +7,16 @@ parametric studies of lunar transfer trajectories.
 """
 
 # Import all required modules
-from interface import display_analysis_menu, get_user_input, display_organized_mission_summary
-from earth_operations import calculate_earth_departure_delta_v
-from trajectory_calculations import lunar_trajectory_calculations
-from lunar_operations import lunar_soi_calculations, calculate_lunar_soi_transit_time, hyperbolic_to_elliptical_conversion
-from analysis import parametric_study_lambda1, find_optimal_lambda1
-from plotting import create_parametric_plots
-from config import DEFAULT_TARGET_PERIGEE_ALTITUDE
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from core.interface import display_analysis_menu, get_user_input, display_organized_mission_summary
+from operations.earth_operations import calculate_earth_departure_delta_v
+from operations.trajectory_calculations import lunar_trajectory_calculations
+from operations.lunar_operations import lunar_soi_calculations, calculate_lunar_soi_transit_time, hyperbolic_to_elliptical_conversion
+from analysis.analysis import parametric_study_lambda1, find_optimal_lambda1
+from analysis.plotting import create_parametric_plots
+from core.config import DEFAULT_TARGET_PERIGEE_ALTITUDE
 
 
 def perform_single_calculation():

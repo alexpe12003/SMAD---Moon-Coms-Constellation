@@ -7,9 +7,9 @@ import sys
 import os
 
 # Add the current directory to Python path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from lunar_operations import lunar_soi_calculations, hyperbolic_to_elliptical_conversion
+from operations.lunar_operations import lunar_soi_calculations, hyperbolic_to_elliptical_conversion
 
 def test_lunar_operations():
     """Test the lunar operations with known values"""

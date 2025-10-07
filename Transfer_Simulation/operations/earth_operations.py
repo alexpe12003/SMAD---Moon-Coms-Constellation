@@ -3,7 +3,10 @@ Earth-related calculations for lunar transfer missions
 """
 
 import math
-from config import *
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from core.config import *
 
 
 def calculate_earth_departure_delta_v(R0, V0, verbose=True):

@@ -1,182 +1,89 @@
-# Lunar Transfer Trajectory Analysis - Modular Structure
+# Lunar Transfer Trajectory Analysis - Organized Structure
 
-This project has been reorganized into a modular structure for better maintainability and code organization.
+This project has been reorganized into a modular folder structure for better maintainability and code organization.
 
-## Project Structure
+## New Project Structure
 
 ```
 Transfer_Simulation/
 ├── main.py                    # Main application entry point
-├── config.py                  # Configuration and constants
-├── interface.py               # User interface and I/O functions
-├── earth_operations.py        # Earth departure calculations
-├── trajectory_calculations.py # Geocentric trajectory analysis
-├── lunar_operations.py        # Lunar SOI and orbit operations
-├── analysis.py               # Parametric studies and optimization
-├── plotting.py               # Visualization and plotting functions
-└── Transfer.py               # Original monolithic file (legacy)
+├── core/                      # Core functionality
+│   ├── __init__.py
+│   ├── config.py             # Configuration and constants
+│   └── interface.py          # User interface and I/O functions
+├── operations/               # Calculation modules
+│   ├── __init__.py
+│   ├── earth_operations.py   # Earth departure calculations
+│   ├── lunar_operations.py   # Lunar SOI and orbit operations
+│   └── trajectory_calculations.py # Geocentric trajectory analysis
+├── analysis/                 # Analysis and visualization
+│   ├── __init__.py
+│   ├── analysis.py          # Parametric studies and optimization
+│   ├── plotting.py          # Visualization and plotting functions
+│   ├── analyze_asin_error.py # Error analysis tools
+│   └── diagnose_lambda1.py  # Lambda1 diagnostic tools
+├── tests/                   # Test modules
+│   ├── __init__.py
+│   └── test_lunar_ops.py   # Unit tests for lunar operations
+├── legacy/                  # Legacy code
+│   └── Transfer.py         # Original monolithic file
+└── docs/                   # Documentation
+    ├── README.md           # This file
+    └── Lambda1_Failure_Analysis.md
 ```
 
-## Module Descriptions
+## Folder Descriptions
 
-### `main.py`
-- **Purpose**: Main application entry point
-- **Functions**: 
-  - `main()`: Program entry point with menu system
-  - `perform_single_calculation()`: Run single lambda1 analysis
-  - `perform_parametric_study()`: Run parametric optimization study
-- **Dependencies**: All other modules
+### `core/`
+Contains the fundamental modules that provide configuration and interface functionality:
+- **`config.py`**: Physical constants, mission parameters, conversion factors
+- **`interface.py`**: User input/output functions and menu system
 
-### `config.py`
-- **Purpose**: Central configuration and constants
-- **Contents**: 
-  - Physical constants (Earth/Moon radii, gravitational parameters)
-  - Mission parameters (default values)
-  - Conversion factors (DU to km, TU to seconds)
-  - Analysis parameters (lambda1 range and step size)
-- **Dependencies**: None
+### `operations/`
+Contains the core calculation modules for trajectory analysis:
+- **`earth_operations.py`**: Earth departure delta-V calculations
+- **`lunar_operations.py`**: Lunar SOI entry, transit time, and orbital mechanics
+- **`trajectory_calculations.py`**: Geocentric trajectory analysis
 
-### `interface.py`
-- **Purpose**: User interface and input/output functions
-- **Functions**:
-  - `get_user_input()`: Collect mission parameters from user
-  - `display_organized_mission_summary()`: Show comprehensive mission results
-  - `display_analysis_menu()`: Main menu system
-- **Dependencies**: config.py
+### `analysis/`
+Contains analysis, optimization, and visualization tools:
+- **`analysis.py`**: Parametric studies and optimization algorithms
+- **`plotting.py`**: Plotting and visualization functions
+- **`analyze_asin_error.py`**: Diagnostic tools for mathematical domain errors
+- **`diagnose_lambda1.py`**: Specific diagnostic tools for lambda1 parameter issues
 
-### `earth_operations.py`
-- **Purpose**: Earth-related calculations
-- **Functions**:
-  - `calculate_earth_departure_delta_v()`: Departure maneuver analysis
-- **Key Features**: 
-  - Circular parking orbit analysis
-  - Transfer trajectory properties
-  - Delta-V calculations for Earth departure
-- **Dependencies**: config.py
+### `tests/`
+Contains unit tests and validation scripts:
+- **`test_lunar_ops.py`**: Unit tests for lunar operations
 
-### `trajectory_calculations.py`
-- **Purpose**: Geocentric trajectory analysis
-- **Functions**:
-  - `lunar_trajectory_calculations()`: Complete Earth-Moon transfer analysis
-- **Key Features**:
-  - Orbital mechanics calculations (energy, momentum, anomalies)
-  - Time of flight analysis
-  - Moon SOI intersection geometry
-- **Dependencies**: config.py
+### `legacy/`
+Contains the original monolithic code for reference:
+- **`Transfer.py`**: Original single-file implementation
 
-### `lunar_operations.py`
-- **Purpose**: Lunar sphere of influence and orbit operations
-- **Functions**:
-  - `lunar_soi_calculations()`: Lunar-centric trajectory analysis
-  - `calculate_lunar_soi_transit_time()`: SOI entry to perigee time
-  - `hyperbolic_to_elliptical_conversion()`: Orbit insertion maneuvers
-- **Key Features**:
-  - Hyperbolic trajectory analysis
-  - Orbit conversion calculations
-  - Circularization maneuvers
-- **Dependencies**: config.py
-
-### `analysis.py`
-- **Purpose**: Parametric studies and optimization
-- **Functions**:
-  - `parametric_study_lambda1()`: Lambda1 optimization study
-  - `find_optimal_lambda1()`: Find optimal solutions
-  - `find_optimal_lambda1_complete()`: Complete mission optimization
-- **Key Features**:
-  - Batch calculations across lambda1 range
-  - Multi-criteria optimization (delta-V, time, balanced)
-  - Statistical analysis
-- **Dependencies**: config.py, earth_operations.py, trajectory_calculations.py, lunar_operations.py
-
-### `plotting.py`
-- **Purpose**: Visualization and plotting
-- **Functions**:
-  - `create_parametric_plots()`: Standard parametric plots
-  - `create_complete_parametric_plots()`: Comprehensive mission plots
-- **Key Features**:
-  - Multi-subplot visualizations
-  - Optimization annotations
-  - Publication-quality plots
-- **Dependencies**: matplotlib, numpy
+### `docs/`
+Contains project documentation and analysis reports:
+- **`README.md`**: This documentation file
+- **`Lambda1_Failure_Analysis.md`**: Detailed analysis of lambda1 parameter issues
 
 ## Usage
 
-### Running the Program
+The main entry point remains the same:
+
 ```bash
 python main.py
 ```
 
-### Menu Options
-1. **Single Calculation**: Analyze one specific lambda1 value with detailed output
-2. **Parametric Study**: Optimize lambda1 from 0-360° with plots and statistics
+The modular structure allows for easier:
+- **Development**: Each module has a specific responsibility
+- **Testing**: Individual modules can be tested in isolation
+- **Maintenance**: Bug fixes and improvements are localized
+- **Extension**: New features can be added without affecting existing code
 
-### Example Single Calculation
-```python
-from main import perform_single_calculation
+## Import Structure
 
-# Run with user input
-results = perform_single_calculation()
-```
+The new modular structure uses relative imports to maintain clean dependencies:
+- Core modules are imported from `core/`
+- Operations are imported from `operations/`
+- Analysis tools are imported from `analysis/`
 
-### Example Parametric Study
-```python
-from main import perform_parametric_study
-
-# Run optimization study
-lambda1_vals, delta_v_vals, time_vals, optimal = perform_parametric_study()
-```
-
-### Using Individual Modules
-```python
-from earth_operations import calculate_earth_departure_delta_v
-from trajectory_calculations import lunar_trajectory_calculations
-from lunar_operations import lunar_soi_calculations
-
-# Calculate Earth departure
-departure_results = calculate_earth_departure_delta_v(1.05, 1.372)
-
-# Calculate geocentric trajectory
-geo_results = lunar_trajectory_calculations(1.05, 1.372, 0, 30)
-
-# Calculate lunar trajectory
-lunar_results = lunar_soi_calculations(
-    geo_results['r1'], geo_results['v1'], 
-    geo_results['phi1_deg'], 30, geo_results['gamma1_deg']
-)
-```
-
-## Configuration
-
-Modify `config.py` to change:
-- **Mission Parameters**: Parking orbit, transfer velocity, target altitude
-- **Analysis Range**: Lambda1 range and step size
-- **Physical Constants**: Gravitational parameters, celestial body properties
-
-## Output Files
-
-- `lambda1_parametric_study.png`: Standard parametric analysis plots
-- `complete_mission_parametric_study.png`: Comprehensive mission analysis plots
-
-## Migration from Legacy Code
-
-The original `Transfer.py` file remains available for reference. The new modular structure provides:
-
-- **Better Organization**: Related functions grouped by purpose
-- **Easier Maintenance**: Changes isolated to relevant modules
-- **Improved Reusability**: Individual modules can be imported separately
-- **Cleaner Dependencies**: Clear separation of concerns
-- **Enhanced Testability**: Individual components can be tested independently
-
-## Dependencies
-
-- `numpy`: Numerical calculations and array operations
-- `matplotlib`: Plotting and visualization
-- `math`: Mathematical functions
-
-## Future Enhancements
-
-The modular structure enables easy addition of:
-- New optimization algorithms (add to `analysis.py`)
-- Different plot types (add to `plotting.py`)
-- Alternative mission profiles (modify `config.py`)
-- Additional trajectory models (extend relevant modules)
+This organization makes the codebase more professional and easier to navigate while maintaining all existing functionality.
