@@ -10,8 +10,6 @@ import numpy as np
 
 import sys
 import os
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 # Ensure parent directory is in sys.path for package imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../Auxiliary')))
@@ -122,83 +120,6 @@ def main():
 	print("argument of perigee (radians):", coe[4])
 	print("true anomaly (radians):", coe[5])
 	print("semi-major axis (km):", coe[6])
-
-	# Plot Geocentric Earth and Moon positions
-	fig = plt.figure(figsize=(10, 8))
-	ax = fig.add_subplot(111, projection='3d')
-	
-	# Plot Earth at origin
-	ax.scatter(0, 0, 0, color='blue', s=100, label='Earth (Center)')
-	
-	# Plot previous satellite position behind Earth
-	ax.scatter(R_satellite_previous[0], R_satellite_previous[1], R_satellite_previous[2], 
-	          color='red', s=40, label='Satellite (Previous Position)')
-	
-	# Plot parking orbit position
-	ax.scatter(R_earth_geo[0], R_earth_geo[1], R_earth_geo[2], color='green', s=50, label='Parking Orbit (Start)')
-	
-	# Plot Moon position
-	ax.scatter(R_moon_geo[0], R_moon_geo[1], R_moon_geo[2], color='gray', s=80, label='Moon (Arrival)')
-	
-	# Plot vectors from Earth center
-	ax.plot([0, R_satellite_previous[0]], [0, R_satellite_previous[1]], [0, R_satellite_previous[2]], 
-	        'r--', alpha=0.7, label='Earth to Previous Position')
-	ax.plot([0, R_earth_geo[0]], [0, R_earth_geo[1]], [0, R_earth_geo[2]], 'g--', alpha=0.7, label='Earth to Parking Orbit')
-	ax.plot([0, R_moon_geo[0]], [0, R_moon_geo[1]], [0, R_moon_geo[2]], 'gray', alpha=0.7, label='Earth to Moon')
-	
-	# Plot satellite trajectory from previous position to parking orbit
-	ax.plot([R_satellite_previous[0], R_earth_geo[0]], [R_satellite_previous[1], R_earth_geo[1]], 
-	        [R_satellite_previous[2], R_earth_geo[2]], 'orange', linewidth=2, alpha=0.8, label='Satellite Path')
-	
-	ax.set_xlabel('X (km)')
-	ax.set_ylabel('Y (km)')
-	ax.set_zlabel('Z (km)')
-	ax.set_title('Geocentric Earth-Moon Transfer')
-	ax.legend()
-	plt.tight_layout()
-	plt.show()
-
-
-	# --- Plot geocentric transfer orbit ---
-	# Use classical orbital elements to reconstruct the orbit
-	# h, e, RA, incl, w, TA, a = coe
-	# Generate true anomaly values
-	# theta_vals = np.linspace(0, 2 * np.pi, 500)
-	# r_vals = a * (1 - e**2) / (1 + e * np.cos(theta_vals))
-	# Perifocal coordinates
-	# x_pf = r_vals * np.cos(theta_vals)
-	# y_pf = r_vals * np.sin(theta_vals)
-	# z_pf = np.zeros_like(x_pf)
-	# Rotation matrices
-	# def rot_matrix(RA, incl, w):
-	#     # Rotation from perifocal to geocentric equatorial frame
-	#     R3_W = np.array([[np.cos(RA), -np.sin(RA), 0],
-	#                     [np.sin(RA),  np.cos(RA), 0],
-	#                     [0, 0, 1]])
-	#     R1_i = np.array([[1, 0, 0],
-	#                     [0, np.cos(incl), -np.sin(incl)],
-	#                     [0, np.sin(incl),  np.cos(incl)]])
-	#     R3_w = np.array([[np.cos(w), -np.sin(w), 0],
-	#                     [np.sin(w),  np.cos(w), 0],
-	#                     [0, 0, 1]])
-	#     return R3_W @ R1_i @ R3_w
-	# Q = rot_matrix(RA, incl, w)
-	# Transform to geocentric equatorial frame
-	# r_orbit = np.vstack((x_pf, y_pf, z_pf))
-	# r_geo = Q @ r_orbit
-	# Plot
-	# fig = plt.figure(figsize=(8, 6))
-	# ax = fig.add_subplot(111, projection='3d')
-	# ax.plot(r_geo[0], r_geo[1], r_geo[2], label='Transfer Orbit')
-	# ax.scatter(R_earth_geo[0], R_earth_geo[1], R_earth_geo[2], color='blue', label='Parking Orbit (Start)')
-	# ax.scatter(R_moon_geo[0], R_moon_geo[1], R_moon_geo[2], color='gray', label='Moon (Arrival)')
-	# ax.set_xlabel('X (km)')
-	# ax.set_ylabel('Y (km)')
-	# ax.set_zlabel('Z (km)')
-	# ax.set_title('Geocentric Transfer Orbit (Parking Orbit to Moon)')
-	# ax.legend()
-	# plt.tight_layout()
-	# plt.show()
 
 if __name__ == "__main__":
 	main()
