@@ -2,12 +2,13 @@
 Circular Orbit Position and Time Calculator
 ==================================================
 This script calculates the position and time for:
-1. A satellite in a circular 200km LEO orbit around Earth
-2. The Moon in a circular orbit around Earth
+1. A satellite in a circular 200km LEO orbit around Earth (150 hour simulation)
+2. The Moon in a circular orbit around Earth (150 hour simulation)
 
 Both orbits are assumed to be coplanar and 2D.
 Position is defined by the angle θ, with θ=0 at initial position.
 Time intervals: 1 minute
+Simulation duration: 150 hours (6.25 days)
 
 Author: Generated for SMAD Moon Communications Constellation
 """
@@ -236,15 +237,15 @@ def main():
     leo_satellite = create_leo_satellite()
     moon = create_moon_orbit()
     
-    # Generate orbit data for one LEO satellite orbit with 1-minute intervals
-    print(f"\nGenerating orbit data for one LEO satellite orbit ({leo_satellite.period/60:.1f} minutes) with 1-minute intervals...")
-    leo_data = leo_satellite.generate_orbit_data(time_interval_s=60, num_orbits=1)
+    # Generate orbit data for 150 hours of LEO satellite simulation with 1-minute intervals
+    simulation_hours = 150
+    leo_orbits_needed = simulation_hours / (leo_satellite.period / 3600)  # Convert to number of LEO orbits
+    print(f"\nGenerating orbit data for {simulation_hours} hours of LEO satellite simulation ({leo_orbits_needed:.1f} LEO orbits) with 1-minute intervals...")
+    leo_data = leo_satellite.generate_orbit_data(time_interval_s=60, num_orbits=leo_orbits_needed)
     
-    # For porkchop plots, we need much more Moon data to cover maximum time of flight
-    # Simulate enough Moon orbit to cover departure duration + max time of flight + buffer
-    max_time_hours = 24 * 5  # 5 days should cover max departure time + max TOF + buffer
-    moon_orbits_needed = max_time_hours / (moon.period / 3600)  # Convert to number of Moon orbits
-    print(f"Generating extended Moon orbit data for {max_time_hours} hours ({moon_orbits_needed:.3f} Moon orbits)...")
+    # Generate Moon orbit data for the same 150 hours simulation period
+    moon_orbits_needed = simulation_hours / (moon.period / 3600)  # Convert to number of Moon orbits
+    print(f"Generating Moon orbit data for {simulation_hours} hours ({moon_orbits_needed:.3f} Moon orbits)...")
     moon_data = moon.generate_orbit_data(time_interval_s=60, num_orbits=moon_orbits_needed)
     
     print(f"LEO data points generated: {len(leo_data['time_min'])}")
@@ -258,7 +259,7 @@ def main():
     print("KEY ORBITAL POSITIONS")
     print(f"{'='*80}")
     
-    key_times = [0, 10, 20, 30, 44, 60, 80, 88]  # minutes - focus on one orbit duration
+    key_times = [0, 60, 360, 720, 1440, 2880, 4320, 7200, 9000]  # minutes - spanning 150 hours (0, 1h, 6h, 12h, 24h, 48h, 72h, 120h, 150h)
     
     print(f"\n{'Time':<15} {'LEO Position':<25} {'Moon Position':<25}")
     print("-" * 65)
@@ -273,8 +274,10 @@ def main():
         
         if t_min < 60:
             time_str = f"{t_min} min"
-        else:
+        elif t_min < 1440:  # Less than 24 hours
             time_str = f"{t_min/60:.1f} hours"
+        else:  # 24 hours or more
+            time_str = f"{t_min/1440:.1f} days"
             
         leo_pos_str = f"θ={leo_theta_deg%360:.1f}°"
         moon_pos_str = f"θ={moon_theta_deg%360:.3f}°"
