@@ -1,0 +1,35 @@
+RK8 Special Case: 100 Orbits Simulation Summary
+==================================================
+
+Orbital Parameters:
+  semimajor_axis: 70000.0
+  eccentricity: 0.9
+  inclination: 0.0
+  raan: 0.0
+  arg_periapsis: 0.0
+  true_anomaly_0: 0.0
+  r_periapsis: 6999.999999999998
+  r_apoapsis: 133000.0
+  orbital_period: 184313.87955274203
+  mean_motion: 3.408959391678168e-05
+  specific_energy: -2.847146012857143
+
+Simulation Parameters:
+  Method: RK8 (8th-order Runge-Kutta)
+  Step size: 100.0 seconds
+  Number of orbits: 100
+  Total steps: 184,315
+  Simulation time span: 18431388.0 s
+
+Performance Results:
+  RK8 computation time: 23.094 s
+  Analytical computation time: 3.433 s
+  Total computation time: 26.527 s
+
+Accuracy Results:
+  Max position error: 9.130e-02 km
+  Final position error: 9.130e-02 km
+  Max velocity error: 7.140e-05 km/s
+  Final velocity error: 7.140e-05 km/s
+  Max energy error: 1.861e-09 km²/s²
+  Final energy error: 1.861e-09 km²/s²

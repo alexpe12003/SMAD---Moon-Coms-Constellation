@@ -42,6 +42,10 @@ def create_all_plots(simulation):
     create_3d_trajectory_plot(simulation)
     create_energy_conservation_plot(simulation)
     
+    # Create special case plot if data exists
+    if 'special_case_100_orbits' in simulation.results:
+        create_special_case_position_error_plot(simulation)
+    
     print(f"All plots saved to {RESULTS_DIR}/")
     
     # Close all figures to free memory
@@ -446,4 +450,67 @@ def create_energy_conservation_plot(simulation):
     
     plt.tight_layout()
     plt.savefig(f'{RESULTS_DIR}/energy_conservation.png', dpi=300, bbox_inches='tight')
+    plt.close()
+
+def create_special_case_position_error_plot(simulation):
+    """Create position error plot for the special case: RK8 100s step for 100 orbits."""
+    print(f"Creating special case position error plot (RK8 100s step, 100 orbits)...")
+    
+    special_data = simulation.results['special_case_100_orbits']
+    
+    fig = plt.figure(figsize=(16, 10))
+    ax = fig.add_subplot(1, 1, 1)
+    
+    # Convert time to orbital periods for better visualization
+    times_orbits = special_data['times'] / simulation.orbit_params['orbital_period']
+    position_errors = special_data['position_errors']
+    
+    # Plot position error over time
+    ax.semilogy(times_orbits, position_errors, 
+               'b-', linewidth=2, alpha=0.8, label='RK8 Position Error (Δt=100s)')
+    
+    # Add some statistical information
+    max_error = np.max(position_errors)
+    final_error = position_errors[-1]
+    mean_error = np.mean(position_errors)
+    
+    # Add horizontal lines for reference
+    ax.axhline(y=max_error, color='red', linestyle='--', alpha=0.7, 
+               label=f'Maximum Error: {max_error:.2e} km')
+    ax.axhline(y=final_error, color='orange', linestyle='--', alpha=0.7, 
+               label=f'Final Error: {final_error:.2e} km')
+    ax.axhline(y=mean_error, color='green', linestyle='--', alpha=0.7, 
+               label=f'Mean Error: {mean_error:.2e} km')
+    
+    # Mark every 10 orbits with vertical lines
+    for orbit_mark in range(10, 101, 10):
+        ax.axvline(x=orbit_mark, color='gray', linestyle=':', alpha=0.3)
+        if orbit_mark % 20 == 0:  # Label every 20 orbits
+            ax.text(orbit_mark, max_error * 0.1, f'{orbit_mark}', 
+                   rotation=90, verticalalignment='bottom', 
+                   horizontalalignment='right', fontsize=9, alpha=0.7)
+    
+    # Formatting
+    ax.set_xlabel('Time (orbital periods)', fontsize=14)
+    ax.set_ylabel('Position Error (km)', fontsize=14)
+    ax.set_title('RK8 Position Error Evolution Over 100 Orbits\n(Step Size: 100 seconds)', 
+                fontsize=16, fontweight='bold')
+    ax.legend(fontsize=12, loc='best')
+    ax.grid(True, alpha=0.3, which='both')
+    
+    # Set x-axis limits
+    ax.set_xlim(0, 100)
+    
+    # Add text box with simulation info
+    info_text = (f"Integration Method: RK8\n"
+                f"Step Size: {special_data['step_size']} s\n"
+                f"Total Steps: {special_data['num_steps']:,}\n"
+                f"Computation Time: {special_data['computation_time']:.1f} s\n"
+                f"Simulation Span: {special_data['num_orbits']} orbits")
+    
+    ax.text(0.02, 0.98, info_text, transform=ax.transAxes, fontsize=10,
+            verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+    
+    plt.tight_layout()
+    plt.savefig(f'{RESULTS_DIR}/special_case_rk8_100orbits_position_error.png', dpi=300, bbox_inches='tight')
     plt.close()

@@ -206,7 +206,93 @@ class OrbitSimulation:
             'true_anomaly': true_anomaly_analytical
         }
         
+        # Special case: RK8 with 100s step for 100 orbits
+        print("\n" + "="*60)
+        print("SPECIAL CASE: RK8 with 100s step size for 100 orbits")
+        print("="*60)
+        
+        self.run_special_case_100_orbits()
+        
         return convergence_results
+    
+    def run_special_case_100_orbits(self):
+        """Run special case: RK8 with 100s step size for 100 orbits."""
+        print(f"Running RK8 integration for 100 orbits with 100s step size...")
+        
+        # Parameters for special case
+        num_orbits_special = 100
+        step_size_special = 100.0  # seconds
+        period = self.orbit_params['orbital_period']
+        t_end_special = num_orbits_special * period
+        
+        print(f"  Total simulation time: {t_end_special:.1f} s ({t_end_special/3600:.2f} hours)")
+        print(f"  Expected number of steps: ~{int(t_end_special/step_size_special):,}")
+        
+        # Run RK8 integration for special case
+        start_time = time.time()
+        times_special, pos_special, vel_special = propagate_orbit_rk8(
+            self.initial_state,
+            (0, t_end_special),
+            step_size_special
+        )
+        computation_time_special = time.time() - start_time
+        
+        print(f"  Actual steps completed: {len(times_special):,}")
+        print(f"  Computation time: {computation_time_special:.3f} s")
+        
+        # Get analytical solution for the same time points
+        print(f"  Calculating analytical reference for comparison...")
+        analytical_start = time.time()
+        pos_analytical_special, vel_analytical_special = analytical_propagation(
+            self.orbit_params, times_special
+        )
+        analytical_time_special = time.time() - analytical_start
+        print(f"  Analytical computation time: {analytical_time_special:.3f} s")
+        
+        # Calculate errors
+        position_errors_special = np.linalg.norm(pos_special - pos_analytical_special, axis=1)
+        velocity_errors_special = np.linalg.norm(vel_special - vel_analytical_special, axis=1)
+        
+        # Calculate energy conservation
+        energy_special = calculate_orbital_energy(pos_special, vel_special)
+        energy_error_special = np.abs(energy_special - energy_special[0])
+        
+        # Calculate angular momentum conservation
+        h_special = calculate_angular_momentum(pos_special, vel_special)
+        h_error_special = np.abs(h_special - h_special[0])
+        
+        # Store special case results
+        self.results['special_case_100_orbits'] = {
+            'times': times_special,
+            'positions': pos_special,
+            'velocities': vel_special,
+            'analytical_positions': pos_analytical_special,
+            'analytical_velocities': vel_analytical_special,
+            'position_errors': position_errors_special,
+            'velocity_errors': velocity_errors_special,
+            'energy_errors': energy_error_special,
+            'angular_momentum_errors': h_error_special,
+            'max_position_error': np.max(position_errors_special),
+            'max_velocity_error': np.max(velocity_errors_special),
+            'max_energy_error': np.max(energy_error_special),
+            'max_h_error': np.max(h_error_special),
+            'final_position_error': position_errors_special[-1],
+            'final_velocity_error': velocity_errors_special[-1],
+            'computation_time': computation_time_special,
+            'analytical_computation_time': analytical_time_special,
+            'num_steps': len(times_special),
+            'step_size': step_size_special,
+            'num_orbits': num_orbits_special
+        }
+        
+        # Print summary results
+        print(f"\n  Special Case Results Summary:")
+        print(f"    Max position error:     {np.max(position_errors_special):>10.3e} km")
+        print(f"    Final position error:   {position_errors_special[-1]:>10.3e} km")
+        print(f"    Max velocity error:     {np.max(velocity_errors_special):>10.3e} km/s")
+        print(f"    Max energy error:       {np.max(energy_error_special):>10.3e} km²/s²")
+        print(f"    RK8 computation time:   {computation_time_special:>10.3f} s")
+        print(f"    Analytical comp. time:  {analytical_time_special:>10.3f} s")
     
     def analyze_results(self):
         """Analyze and print convergence results."""
@@ -255,6 +341,19 @@ class OrbitSimulation:
                     print(f"Expected for RK4: ~4.0")
                 elif method_name == 'RK8':
                     print(f"Expected for RK8: ~8.0")
+        
+        # Print special case results
+        if 'special_case_100_orbits' in self.results:
+            special_data = self.results['special_case_100_orbits']
+            print(f"\n{'='*60}")
+            print("SPECIAL CASE RESULTS: RK8 - 100s step for 100 orbits")
+            print(f"{'='*60}")
+            print(f"Steps: {special_data['num_steps']:>8d}")
+            print(f"Computation time: {special_data['computation_time']:>8.3f} s")
+            print(f"Max position error: {special_data['max_position_error']:>12.3e} km")
+            print(f"Final position error: {special_data['final_position_error']:>12.3e} km")
+            print(f"Max velocity error: {special_data['max_velocity_error']:>12.3e} km/s")
+            print(f"Max energy error: {special_data['max_energy_error']:>12.3e} km²/s²")
             
     def save_results(self):
         """Save results to files."""
@@ -304,6 +403,24 @@ class OrbitSimulation:
                          true_anomaly_errors=result['true_anomaly_errors'],
                          step_size=step_size,
                          method=method_name)
+        
+        # Save special case results
+        if 'special_case_100_orbits' in self.results:
+            special_data = self.results['special_case_100_orbits']
+            filename = f"{RESULTS_DIR}/rk8_special_case_100orbits_100s.npz"
+            
+            np.savez(filename,
+                     times=special_data['times'],
+                     positions=special_data['positions'],
+                     velocities=special_data['velocities'],
+                     analytical_positions=special_data['analytical_positions'],
+                     analytical_velocities=special_data['analytical_velocities'],
+                     position_errors=special_data['position_errors'],
+                     velocity_errors=special_data['velocity_errors'],
+                     energy_errors=special_data['energy_errors'],
+                     step_size=special_data['step_size'],
+                     num_orbits=special_data['num_orbits'],
+                     method='RK8_special_100_orbits')
         
         print(f"Results saved successfully!")
 
