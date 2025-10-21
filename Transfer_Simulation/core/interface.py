@@ -141,13 +141,52 @@ def display_analysis_menu():
     print("Choose analysis type:")
     print("1. Single calculation with user-defined lambda1")
     print("2. Parametric study: lambda1 from 0-360° (5° steps)")
+    print("3. Multi-parameter optimization: V0, gamma0, lambda1")
     
     while True:
         try:
-            choice = input("Enter choice (1 or 2): ").strip()
-            if choice in ['1', '2']:
+            choice = input("Enter choice (1, 2, or 3): ").strip()
+            if choice in ['1', '2', '3']:
                 return choice
             else:
-                print("Please enter 1 or 2")
+                print("Please enter 1, 2, or 3")
         except:
-            print("Please enter 1 or 2")
+            print("Please enter 1, 2, or 3")
+
+
+def get_optimization_parameters():
+    """
+    Get optimization parameters from the user
+    
+    Returns:
+    - Dictionary with optimization parameters
+    """
+    print("\nMULTI-PARAMETER OPTIMIZATION")
+    print("=" * 50)
+    print("This will optimize V0, gamma0, and lambda1 to minimize mission delta-V")
+    print("R0 is fixed at 1.05 DU as requested")
+    print()
+    print("Parameter ranges:")
+    print("- V0: 1.372 to 2.0 DU/TU")
+    print("- gamma0: 0° to 90°")
+    print("- lambda1: 0° to 360°")
+    print()
+    
+    while True:
+        try:
+            num_steps = int(input("Enter number of optimization steps (minimum 360, recommended 500-1000): "))
+            if num_steps < 360:
+                print("Warning: Number of steps should be at least 360 for adequate coverage.")
+                confirm = input("Continue with this value? (y/n): ").lower()
+                if confirm == 'y':
+                    break
+            else:
+                break
+        except ValueError:
+            print("Please enter a valid integer.")
+    
+    print("Note: Results will be displayed only (no files will be created)")
+    
+    return {
+        'num_steps': num_steps
+    }

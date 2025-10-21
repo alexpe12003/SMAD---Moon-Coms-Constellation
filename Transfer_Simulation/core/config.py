@@ -18,7 +18,7 @@ MOON_ORBITAL_VELOCITY = 1.018  # km/s - Moon's orbital velocity relative to Eart
 # Mission parameters
 DEFAULT_PARKING_ORBIT_RADIUS = 1.05  # DU
 DEFAULT_TRANSFER_VELOCITY = 1.372    # DU/TU
-DEFAULT_FLIGHT_PATH_ANGLE = 0        # degrees
+DEFAULT_FLIGHT_PATH_ANGLE = 10       # degrees
 DEFAULT_TARGET_PERIGEE_ALTITUDE = 1100  # km
 
 # Conversion factors

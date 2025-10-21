@@ -10,12 +10,13 @@ parametric studies of lunar transfer trajectories.
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from core.interface import display_analysis_menu, get_user_input, display_organized_mission_summary
+from core.interface import display_analysis_menu, get_user_input, display_organized_mission_summary, get_optimization_parameters
 from operations.earth_operations import calculate_earth_departure_delta_v
 from operations.trajectory_calculations import lunar_trajectory_calculations
 from operations.lunar_operations import lunar_soi_calculations, calculate_lunar_soi_transit_time, hyperbolic_to_elliptical_conversion
 from analysis.analysis import parametric_study_lambda1, find_optimal_lambda1
 from analysis.plotting import create_parametric_plots
+from analysis.optimization import multi_parameter_optimization
 from core.config import DEFAULT_TARGET_PERIGEE_ALTITUDE
 
 
@@ -81,6 +82,27 @@ def perform_parametric_study():
     return lambda1_values, delta_v_values, tof_values, optimal_results
 
 
+def perform_multi_parameter_optimization():
+    """
+    Perform multi-parameter optimization of V0, gamma0, and lambda1
+    
+    Returns:
+    - Dictionary containing optimization results
+    """
+    # Get optimization parameters from user
+    opt_params = get_optimization_parameters()
+    
+    # Run optimization
+    print("\nStarting multi-parameter optimization...")
+    results = multi_parameter_optimization(num_steps=opt_params['num_steps'])
+    
+    # Note: File saving capability has been removed as requested
+    if results is None:
+        print("Optimization failed.")
+    
+    return results
+
+
 def main():
     """
     Main function to run the complete lunar transfer trajectory analysis
@@ -92,9 +114,13 @@ def main():
         # Single calculation
         results = perform_single_calculation()
         return results
-    else:
+    elif choice == '2':
         # Parametric study
         results = perform_parametric_study()
+        return results
+    else:
+        # Multi-parameter optimization
+        results = perform_multi_parameter_optimization()
         return results
 
 
