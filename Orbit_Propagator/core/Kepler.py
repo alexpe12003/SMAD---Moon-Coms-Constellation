@@ -18,7 +18,7 @@ from .coe_sv import coe_from_sv
 # KEPLER'S EQUATION SOLVER
 # =============================================================================
 
-def solve_kepler_equation(mean_anomaly, eccentricity, tolerance=KEPLER_TOLERANCE, max_iterations=100):
+def solve_kepler_equation(mean_anomaly, eccentricity, tolerance=KEPLER_TOLERANCE, max_iterations=1000):
     """
     Solve Kepler's equation using Newton-Raphson method.
     

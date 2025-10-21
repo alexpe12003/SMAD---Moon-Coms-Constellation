@@ -17,7 +17,7 @@ from operations.lunar_operations import lunar_soi_calculations, calculate_lunar_
 from analysis.analysis import parametric_study_lambda1, find_optimal_lambda1
 from analysis.plotting import create_parametric_plots
 from analysis.optimization import multi_parameter_optimization
-from core.config import DEFAULT_TARGET_PERIGEE_ALTITUDE
+
 
 
 def perform_single_calculation():
@@ -48,19 +48,18 @@ def perform_single_calculation():
         verbose=True
     )
     soi_transit_results = calculate_lunar_soi_transit_time(lunar_results, verbose=True)
-    elliptical_results = hyperbolic_to_elliptical_conversion(
+    circular_results = hyperbolic_to_elliptical_conversion(
         lunar_results, 
-        target_perigee_altitude_km=DEFAULT_TARGET_PERIGEE_ALTITUDE, 
         verbose=True
     )
     
     # Display complete organized mission summary
     display_organized_mission_summary(
         user_inputs, departure_results, geo_results, 
-        lunar_results, soi_transit_results, elliptical_results
+        lunar_results, soi_transit_results, circular_results
     )
     
-    return user_inputs, departure_results, geo_results, lunar_results, soi_transit_results, elliptical_results
+    return user_inputs, departure_results, geo_results, lunar_results, soi_transit_results, circular_results
 
 
 def perform_parametric_study():

@@ -68,13 +68,13 @@ def plot_deployment_timeline(deployment_schedule, transfer_time_h, stagger_time_
 
 def plot_hohmann_transfer_geometry():
     """
-    Plot the Hohmann transfer geometry from 1764 km to 1000 km altitude
+    Plot the Hohmann transfer geometry from 1083 km to 1000 km altitude
     """
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
     
     # Constants
     moon_radius = 1737.4  # km
-    r1 = moon_radius + 1764  # Initial orbit (hyperbolic perigee)
+    r1 = moon_radius + 1083  # Initial orbit (hyperbolic perigee)
     r2 = moon_radius + 1000  # Final orbit
     
     # Create circular orbits
@@ -102,7 +102,7 @@ def plot_hohmann_transfer_geometry():
     
     # Plot 1: Orbital geometry
     ax1.fill(moon_x, moon_y, color='gray', alpha=0.7, label='Moon')
-    ax1.plot(orbit1_x, orbit1_y, 'b-', linewidth=2, label='1764 km orbit')
+    ax1.plot(orbit1_x, orbit1_y, 'b-', linewidth=2, label='1083 km orbit')
     ax1.plot(orbit2_x, orbit2_y, 'g-', linewidth=2, label='1000 km orbit')
     ax1.plot(ellipse_x, ellipse_y, 'r--', linewidth=2, label='Transfer orbit')
     
@@ -139,8 +139,8 @@ def plot_hohmann_transfer_geometry():
     # Delta-Vs
     dv1 = abs(v1_circular - v1_transfer)
     dv2 = abs(v2_circular - v2_transfer)
-    
-    positions = ['1764 km\n(Start)', '1764 km\n(Transfer)', '1000 km\n(Transfer)', '1000 km\n(Final)']
+
+    positions = ['1083 km\n(Start)', '1083 km\n(Transfer)', '1000 km\n(Transfer)', '1000 km\n(Final)']
     velocities = [v1_circular, v1_transfer, v2_transfer, v2_circular]
     
     ax2.bar(positions, [v*1000 for v in velocities], color=['blue', 'red', 'red', 'green'], alpha=0.7)

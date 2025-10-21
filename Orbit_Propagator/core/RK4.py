@@ -521,84 +521,72 @@ def calculate_angular_momentum(position, velocity):
         h_vec = np.cross(position, velocity, axis=-1)
         return np.linalg.norm(h_vec, axis=-1)
 
-def calculate_true_anomaly_from_state(position, velocity, orbital_elements, mu=MU_EARTH):
+def calculate_true_anomaly_from_state(position, velocity, mu=MU_EARTH):
     """
-    Calculate true anomaly from position and velocity vectors using orbital elements.
+    Calculate true anomaly from position and velocity vectors.
     
     This function converts Cartesian state vectors back to the true anomaly,
     which represents the satellite's angular position in its elliptical orbit.
+    Uses the eccentricity vector method for numerical robustness.
+    
+    Mathematical Approach:
+    1. Calculate eccentricity vector: e_vec = (1/μ)*[(v²-μ/r)*r - (r·v)*v]
+    2. Find true anomaly: cos(ν) = (e_vec · r) / (|e_vec| * |r|)
+    3. Determine quadrant using radial velocity (r·v)
     
     Args:
         position (np.ndarray): Position vector(s) [km] - shape (3,) or (N, 3)
         velocity (np.ndarray): Velocity vector(s) [km/s] - shape (3,) or (N, 3)
-        orbital_elements (dict): Orbital elements containing:
-            - semimajor_axis: Semi-major axis [km]
-            - eccentricity: Eccentricity [-]
-            - inclination: Inclination [rad]
-            - raan: Right ascension of ascending node [rad]
-            - arg_periapsis: Argument of periapsis [rad]
-        mu (float): Gravitational parameter [km³/s²]
+        mu (float): Gravitational parameter [km³/s²] (default: Earth)
         
     Returns:
-        np.ndarray: True anomaly [rad] - shape () or (N,)
+        float or np.ndarray: True anomaly [rad] - scalar for single input, array for multiple
         
     Notes:
-        Uses the relationship between position vector and orbital geometry:
-        r = a(1-e²)/(1+e*cos(ν)) where ν is the true anomaly
-        Also uses the dot product with the eccentricity vector to determine
-        the angular position relative to periapsis.
+        - Works for any eccentricity (circular, elliptical, parabolic, hyperbolic)
+        - Automatically handles single vectors or arrays of state vectors
+        - Uses numerical clipping to prevent domain errors in arccos()
+        - Determines correct quadrant (0-2π) using velocity direction
     """
-    # Extract orbital elements
-    a = orbital_elements['semimajor_axis']
-    e = orbital_elements['eccentricity']
-    i = orbital_elements['inclination']
-    raan = orbital_elements['raan']
-    arg_p = orbital_elements['arg_periapsis']
-    
     # Handle both single vectors and arrays of vectors
     single_vector = position.ndim == 1
     if single_vector:
         position = position.reshape(1, 3)
         velocity = velocity.reshape(1, 3)
     
-    # Calculate orbital radius
+    # Calculate orbital radius and velocity components
     r_mag = np.linalg.norm(position, axis=1)
-    
-    # Calculate angular momentum vector
-    h_vec = np.cross(position, velocity)
-    h_mag = np.linalg.norm(h_vec, axis=1)
-    
-    # Calculate eccentricity vector: e_vec = (1/μ)*[(v²-μ/r)*r - (r·v)*v]
-    r_dot_v = np.sum(position * velocity, axis=1)
+    r_dot_v = np.sum(position * velocity, axis=1)  # Radial velocity component
     v_mag_sq = np.sum(velocity**2, axis=1)
     
+    # Calculate eccentricity vector using vis-viva equation
+    # e_vec = (1/μ)*[(v²-μ/r)*r - (r·v)*v]
+    # This is more numerically stable than using orbital elements
     e_vec = np.zeros_like(position)
     for i in range(len(position)):
         e_vec[i] = (1/mu) * ((v_mag_sq[i] - mu/r_mag[i]) * position[i] - r_dot_v[i] * velocity[i])
     
     e_mag = np.linalg.norm(e_vec, axis=1)
     
-    # Calculate true anomaly using the relationship:
+    # Calculate true anomaly using dot product relationship
     # cos(ν) = (e_vec · r) / (|e_vec| * |r|)
     cos_nu = np.sum(e_vec * position, axis=1) / (e_mag * r_mag)
     
-    # Ensure cos_nu is in valid range [-1, 1] (numerical safety)
+    # Numerical safety: ensure cosine is in valid domain [-1, 1]
     cos_nu = np.clip(cos_nu, -1.0, 1.0)
     
-    # Calculate true anomaly
+    # Calculate true anomaly (principal value: 0 to π)
     nu = np.arccos(cos_nu)
     
-    # Determine correct quadrant using velocity direction
-    # If r · v < 0, then we're moving toward periapsis (ν > π)
+    # Determine correct quadrant using radial velocity
+    # If r·v < 0: moving toward periapsis → ν is in range (π, 2π)
+    # If r·v > 0: moving away from periapsis → ν is in range (0, π)
     for i in range(len(position)):
         if r_dot_v[i] < 0:
             nu[i] = 2*np.pi - nu[i]
     
-    # Return scalar if input was scalar
-    if single_vector:
-        return nu[0]
-    else:
-        return nu
+    # Return scalar if input was scalar, array otherwise
+    return nu[0] if single_vector else nu
 
 if __name__ == "__main__":
     # Test the RK4 integrator with a simple example

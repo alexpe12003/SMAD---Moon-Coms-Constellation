@@ -53,7 +53,7 @@ def display_organized_mission_summary(inputs, departure_results, geo_results, lu
     - geo_results: Geocentric trajectory results
     - lunar_results: Lunar SOI trajectory results
     - soi_transit_results: SOI transit time results
-    - elliptical_results: Orbit conversion results (optional)
+    - elliptical_results: Orbit conversion results (optional) - now supports circular results
     """
     print("\n" + "=" * 80)
     print("COMPLETE LUNAR TRANSFER MISSION ANALYSIS")
@@ -95,24 +95,21 @@ def display_organized_mission_summary(inputs, departure_results, geo_results, lu
     print(f"   SOI Entry to Perigee Time: {soi_transit_results['soi_transit_time_hours']:.2f} hours")
     print(f"   Natural Flyby Altitude: {lunar_results['hp']:.0f} km above surface")
     
-    # Step 4: Lunar Orbit Insertion (if elliptical conversion provided)
+    # Step 4: Lunar Orbit Insertion (if circular conversion provided)
     if elliptical_results:
-        print(f"\n🛰️ STEP 4: LUNAR ORBIT INSERTION")
+        print(f"\n🛰️ STEP 4: LUNAR ORBIT CIRCULARIZATION")
         print(f"   Maneuver Location: {elliptical_results['hp_hyperbolic']:.0f} km altitude")
-        print(f"   Delta-V Required: {elliptical_results['delta_v_conversion']:.3f} km/s")
-        print(f"   Resulting Orbit: {elliptical_results['hp_hyperbolic']:.0f} × {elliptical_results['target_perigee_altitude_km']:.0f} km")
-        print(f"   Orbital Period: {elliptical_results['orbital_period_hours']:.2f} hours")
-        
-        # Step 5: Orbit Circularization
-        print(f"\n🔄 STEP 5: ORBIT CIRCULARIZATION (Optional)")
-        print(f"   Circularization at: {elliptical_results['target_perigee_altitude_km']:.0f} km altitude")
-        print(f"   Delta-V Required: {elliptical_results['delta_v_circularization']:.3f} km/s")
+        print(f"   Hyperbolic Velocity: {elliptical_results['v_hyp_perigee']:.3f} km/s")
+        print(f"   Circular Velocity: {elliptical_results['v_circular']:.3f} km/s")
+        print(f"   Delta-V Required: {elliptical_results['delta_v_magnitude']:.3f} km/s")
+        print(f"   Resulting Orbit: {elliptical_results['hp_circular']:.0f} km circular")
+        print(f"   Orbital Period: {elliptical_results['circular_period_hours']:.2f} hours")
     
     # Mission Summary
     print(f"\n📊 COMPLETE MISSION SUMMARY:")
     print(f"   Earth Departure Delta-V: {departure_results['delta_v_departure_kms']:.3f} km/s")
     if elliptical_results:
-        print(f"   Lunar Operations Delta-V: {elliptical_results['total_delta_v']:.3f} km/s")
+        print(f"   Lunar Circularization Delta-V: {elliptical_results['total_delta_v']:.3f} km/s")
         total_mission_dv = departure_results['delta_v_departure_kms'] + elliptical_results['total_delta_v']
         print(f"   TOTAL MISSION DELTA-V: {total_mission_dv:.3f} km/s")
     
@@ -122,7 +119,7 @@ def display_organized_mission_summary(inputs, departure_results, geo_results, lu
     print(f"   TOTAL MISSION DURATION: {total_mission_time:.1f} hours")
     
     if elliptical_results:
-        print(f"   Final Orbit: {elliptical_results['target_perigee_altitude_km']:.0f} km circular")
+        print(f"   Final Orbit: {elliptical_results['hp_circular']:.0f} km circular")
     
     print("=" * 80)
 

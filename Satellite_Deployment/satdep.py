@@ -1,11 +1,11 @@
 """
 Satellite Deployment System for Moon Communications Constellation
-Using Hohmann Transfer Strategy with Staggered Burns
+Starting from Polar Circular Orbit at 1084 km
 
-This system implements the deployment strategy shown in the reference images:
-1. Circularize hyperbolic orbit at perigee and change inclination to 90°
-2. Use Hohmann transfers from 1100km to 1000km circular orbits
-3. Stagger burns with time gap τ to achieve 60° spacing between satellites
+This system implements the deployment strategy:
+1. Start from existing polar circular orbit at 1084 km altitude
+2. Deploy 6 satellites with 60° spacing in the 1084km orbit
+3. Transfer all satellites down to 1000km final orbit using Hohmann transfers
 
 Based on lunar constants:
 - Moon radius R = 1737.4 km
@@ -25,39 +25,37 @@ MOON_RADIUS_KM = 1737.4  # km
 MU_MOON_KMS = 4902.800   # km³/s²
 
 # Mission parameters
-R1 = MOON_RADIUS_KM + 1764  # Initial circular orbit at hyperbolic perigee (1764 km altitude)
+R1 = MOON_RADIUS_KM + 1084  # Initial polar circular orbit (1084 km altitude)
 R2 = MOON_RADIUS_KM + 1000  # Final circular orbit (1000 km altitude)
-TARGET_SPACING_DEG = 60     # degrees between satellites within each carrier
-NUM_CARRIERS = 7            # Number of carriers
-NUM_SATELLITES_PER_CARRIER = 6  # Satellites per carrier
-TOTAL_SATELLITES = NUM_CARRIERS * NUM_SATELLITES_PER_CARRIER  # 42 total satellites
+TARGET_SPACING_DEG = 60     # degrees between satellites
+NUM_SATELLITES = 6          # Total number of satellites
+TOTAL_SATELLITES = NUM_SATELLITES  # 6 total satellites
 
 class MoonConstellationDeployer:
     """
-    Handles deployment of 42 satellites (7 carriers × 6 satellites each) using:
-    1. Staggered inclination changes for carriers (different RAAN)
-    2. Staggered Hohmann transfers within each carrier
+    Handles deployment of 6 satellites starting from polar circular orbit at 1084km:
+    1. Start from existing polar circular orbit at 1084km altitude (90° inclination)
+    2. Deploy 6 satellites with 60° spacing in the 1084km orbit
+    3. Transfer all satellites down to 1000km final orbit using Hohmann transfers
     """
     
     def __init__(self):
         self.moon_radius = MOON_RADIUS_KM
         self.mu_moon = MU_MOON_KMS
-        self.r1 = R1  # Initial orbit radius (1764 km altitude - hyperbolic perigee)
+        self.r1 = R1  # Initial orbit radius (1084 km altitude - polar circular)
         self.r2 = R2  # Final orbit radius (1000 km altitude)
         self.target_spacing_deg = TARGET_SPACING_DEG
-        self.num_carriers = NUM_CARRIERS
-        self.num_satellites_per_carrier = NUM_SATELLITES_PER_CARRIER
+        self.num_satellites = NUM_SATELLITES
         self.total_satellites = TOTAL_SATELLITES
         
         # Calculate orbital parameters
         self.calculate_orbital_parameters()
         self.calculate_transfer_parameters()
         self.calculate_staggering_time()
-        self.calculate_carrier_staggering_time()
     
     def calculate_orbital_parameters(self):
         """Calculate circular orbital parameters for both orbits"""
-        # Initial orbit (1100 km altitude)
+        # Initial orbit (1083 km altitude)
         self.n1 = math.sqrt(self.mu_moon / self.r1**3)  # Mean motion rad/s
         self.v1_circular = math.sqrt(self.mu_moon / self.r1)  # Circular velocity km/s
         self.T1 = 2 * math.pi / self.n1  # Orbital period seconds
@@ -70,7 +68,7 @@ class MoonConstellationDeployer:
         self.T2_hours = self.T2 / 3600  # Period in hours
         
         print(f"Orbital Parameters:")
-        print(f"  Initial orbit (1764 km): n1 = {self.n1:.4e} rad/s, T1 = {self.T1_hours:.2f} h")
+        print(f"  Initial orbit (1084 km): n1 = {self.n1:.4e} rad/s, T1 = {self.T1_hours:.2f} h")
         print(f"  Final orbit (1000 km):   n2 = {self.n2:.4e} rad/s, T2 = {self.T2_hours:.2f} h")
     
     def calculate_transfer_parameters(self):
@@ -79,14 +77,14 @@ class MoonConstellationDeployer:
         self.a_transfer = (self.r1 + self.r2) / 2  # Semi-major axis
         
         # Velocities for Hohmann transfer
-        # At 1764 km (apogee of transfer orbit)
+        # At 1084 km (apogee of transfer orbit)
         self.v_transfer_r1 = math.sqrt(self.mu_moon * (2/self.r1 - 1/self.a_transfer))
         
         # At 1000 km (perigee of transfer orbit)  
         self.v_transfer_r2 = math.sqrt(self.mu_moon * (2/self.r2 - 1/self.a_transfer))
         
         # Delta-V calculations
-        self.delta_v1 = abs(self.v1_circular - self.v_transfer_r1)  # First burn (retrograde at 1764 km)
+        self.delta_v1 = abs(self.v1_circular - self.v_transfer_r1)  # First burn (retrograde at 1084 km)
         self.delta_v2 = abs(self.v2_circular - self.v_transfer_r2)  # Second burn (prograde at 1000 km)
         self.total_delta_v = self.delta_v1 + self.delta_v2
         
@@ -96,19 +94,20 @@ class MoonConstellationDeployer:
         
         print(f"\nHohmann Transfer Parameters:")
         print(f"  Transfer semi-major axis: {self.a_transfer:.1f} km")
-        print(f"  First burn (retrograde at 1764 km): Delta-v1 = {self.delta_v1*1000:.2f} m/s")
+        print(f"  First burn (retrograde at 1084 km): Delta-v1 = {self.delta_v1*1000:.2f} m/s")
         print(f"  Second burn (prograde at 1000 km): Delta-v2 = {self.delta_v2*1000:.2f} m/s")
         print(f"  Total per satellite: Delta-v = {self.total_delta_v*1000:.2f} m/s")
         print(f"  Transfer time: {self.t_transfer_hours:.3f} h ({self.t_transfer:.1f} s)")
     
     def calculate_staggering_time(self):
-        """Calculate the staggering time τ for 60° spacing"""
-        # From the images: Δθₖ = (n₁ - n₂)(k-1)τ
+        """Calculate the staggering time τ for 60° spacing in final orbit"""
+        # The staggering time is based on differential motion between initial and final orbits
+        # Δθₖ = (n₂ - n₁)(k-1)τ
         # For 60° spacing: Δθ = π/3 radians
         # τ = π/3 / (n₂ - n₁)
         
         spacing_rad = math.radians(self.target_spacing_deg)
-        self.tau = spacing_rad / (self.n2 - self.n1)
+        self.tau = spacing_rad / (self.n2 - self.n1)  # Correct formula restored
         self.tau_hours = self.tau / 3600
         
         print(f"\nStaggering Parameters:")
@@ -116,304 +115,367 @@ class MoonConstellationDeployer:
         print(f"  Mean motion difference: n2 - n1 = {(self.n2 - self.n1):.4e} rad/s")
         print(f"  Staggering time tau = {self.tau:.1f} s = {self.tau_hours:.3f} h")
     
-    def calculate_carrier_staggering_time(self):
-        """Calculate the staggering time for carrier inclination changes"""
-        # Each carrier waits T1/7 before inclination change to get different RAAN
-        self.carrier_stagger_time = self.T1 / self.num_carriers  # seconds
-        self.carrier_stagger_hours = self.carrier_stagger_time / 3600  # hours
-        
-        print(f"\nCarrier Staggering Parameters:")
-        print(f"  Number of carriers: {self.num_carriers}")
-        print(f"  Initial orbit period T1: {self.T1_hours:.3f} h")
-        print(f"  Carrier stagger time: T1/{self.num_carriers} = {self.carrier_stagger_hours:.3f} h ({self.carrier_stagger_time:.1f} s)")
-        print(f"  RAAN separation: {360/self.num_carriers:.1f} deg per carrier")
-    
-    def calculate_hyperbolic_insertion_maneuver(self, hyperbolic_data):
+    def get_initial_orbit_data(self):
         """
-        Calculate maneuver to insert from hyperbolic orbit into circular orbit at perigee (1764 km)
-        and change inclination to 90°
-        
-        Parameters:
-        - hyperbolic_data: Dictionary with hyperbolic orbit parameters
+        Get data for the initial polar circular orbit at 1084 km
         
         Returns:
-        - Dictionary with insertion maneuver data
+        - Dictionary with initial orbit data
         """
-        # From Transfer_Simulation results, we get hyperbolic velocity at perigee
-        v_hyp_perigee = hyperbolic_data.get('v_hyp_perigee', 2.077)  # km/s from previous run
-        perigee_altitude = hyperbolic_data.get('perigee_altitude', 1764)  # km
+        # Calculate velocity for circular orbit at 1084 km altitude
+        v_circular = math.sqrt(self.mu_moon / self.r1)
         
-        # Calculate velocity needed for circular orbit at perigee altitude (1764 km)
-        v_circular_perigee = math.sqrt(self.mu_moon / self.r1)
+        # Orbital period
+        T_circular = 2 * math.pi * math.sqrt(self.r1**3 / self.mu_moon)
         
-        # Delta-V for orbit insertion (velocity change magnitude)
-        delta_v_insertion = abs(v_hyp_perigee - v_circular_perigee)
-        
-        # Delta-V for inclination change from 28.6° to 90°
-        # Δv = 2*v*sin(Δi/2) where Δi = |90° - 28.6°| = 61.4°
-        initial_inclination_deg = 28.6
-        target_inclination_deg = 90.0
-        inclination_change_deg = abs(target_inclination_deg - initial_inclination_deg)
-        delta_v_inclination = 2 * v_circular_perigee * math.sin(math.radians(inclination_change_deg)/2)
-        
-        # Total insertion delta-v
-        total_insertion_delta_v = delta_v_insertion + delta_v_inclination
-        
-        insertion_data = {
-            'v_hyperbolic': v_hyp_perigee,
-            'v_circular_perigee': v_circular_perigee,
-            'delta_v_insertion': delta_v_insertion,
-            'delta_v_inclination': delta_v_inclination,
-            'total_insertion_delta_v': total_insertion_delta_v,
-            'initial_inclination_deg': initial_inclination_deg,
-            'final_inclination_deg': target_inclination_deg,
-            'inclination_change_deg': inclination_change_deg,
-            'maneuver_altitude': perigee_altitude  # Circularize at perigee altitude
+        initial_orbit_data = {
+            'altitude_km': 1084,
+            'radius_km': self.r1,
+            'velocity_kms': v_circular,
+            'period_s': T_circular,
+            'period_h': T_circular / 3600,
+            'inclination_deg': 90.0,
+            'orbit_type': 'Polar Circular',
+            'mean_motion_rad_s': self.n1
         }
         
-        return insertion_data
+        return initial_orbit_data
     
-    def create_deployment_schedule(self):
-        """Create the deployment schedule for all 7 carriers with 6 satellites each"""
-        all_schedules = []
+    def calculate_raan_change_maneuver(self, raan_change_deg):
+        """
+        Calculate delta-V required to change RAAN without changing inclination.
+        This maneuver must be performed at the polar crossing points (90° from ascending node).
         
-        for carrier_id in range(1, self.num_carriers + 1):
-            # Time when this carrier performs inclination change
-            carrier_inclination_time = (carrier_id - 1) * self.carrier_stagger_time
-            carrier_inclination_hours = carrier_inclination_time / 3600
+        Parameters:
+        - raan_change_deg: RAAN change in degrees
+        
+        Returns:
+        - Dictionary with RAAN change maneuver data
+        """
+        # For a polar orbit (i = 90°), RAAN change is performed at the polar crossings
+        # At these points, the spacecraft is moving purely in the orbital plane
+        
+        # Convert RAAN change to radians
+        raan_change_rad = math.radians(raan_change_deg)
+        
+        # Velocity at 1084km circular orbit
+        v_circular = self.v1_circular  # km/s
+        
+        # For RAAN change at polar crossing in a polar orbit:
+        # The velocity vector is horizontal (tangent to surface)
+        # Delta-V = 2 * v * sin(ΔRAAN/2) 
+        delta_v_raan = 2 * v_circular * math.sin(raan_change_rad / 2)
+        
+        # Time to reach polar crossing from ascending node
+        # For a polar orbit, polar crossings are at 90° and 270° true anomaly
+        time_to_polar_crossing = (math.pi / 2) / self.n1  # Quarter orbit
+        time_to_polar_crossing_hours = time_to_polar_crossing / 3600
+        
+        raan_data = {
+            'raan_change_deg': raan_change_deg,
+            'raan_change_rad': raan_change_rad,
+            'delta_v_raan_ms': delta_v_raan * 1000,
+            'delta_v_raan_kms': delta_v_raan,
+            'maneuver_location': 'Polar crossing (90° from ascending node)',
+            'orbital_velocity_kms': v_circular,
+            'time_to_maneuver_s': time_to_polar_crossing,
+            'time_to_maneuver_h': time_to_polar_crossing_hours,
+            'altitude_km': 1084,
+            'inclination_deg': 90
+        }
+        
+        print(f"\nRAAN CHANGE MANEUVER ANALYSIS:")
+        print(f"  RAAN change required: {raan_change_deg:.2f} deg = {raan_change_rad:.4f} rad")
+        print(f"  Maneuver location: Polar crossing (±90° latitude)")
+        print(f"  Orbital velocity: {v_circular:.3f} km/s")
+        print(f"  Delta-V required: {delta_v_raan*1000:.2f} m/s")
+        print(f"  Time to polar crossing: {time_to_polar_crossing_hours:.3f} h ({time_to_polar_crossing:.1f} s)")
+        print(f"  Maneuver efficiency: Optimal (performed at polar crossing)")
+        
+        return raan_data
+    
+    def calculate_multi_plane_deployment(self, num_planes=7):
+        """
+        Calculate deployment strategy for multiple orbital planes using RAAN changes.
+        
+        Parameters:
+        - num_planes: Number of orbital planes (default 7)
+        
+        Returns:
+        - Dictionary with multi-plane deployment analysis
+        """
+        raan_separation_deg = 360.0 / num_planes
+        
+        print(f"\nMULTI-PLANE DEPLOYMENT ANALYSIS:")
+        print(f"  Number of orbital planes: {num_planes}")
+        print(f"  RAAN separation: {raan_separation_deg:.2f} deg")
+        
+        planes_data = []
+        total_raan_delta_v = 0
+        
+        for plane_id in range(num_planes):
+            if plane_id == 0:
+                # First plane uses the original RAAN (no maneuver needed)
+                raan_change_deg = 0
+                delta_v_raan = 0
+            else:
+                # Subsequent planes need RAAN change
+                raan_change_deg = raan_separation_deg
+                raan_maneuver = self.calculate_raan_change_maneuver(raan_change_deg)
+                delta_v_raan = raan_maneuver['delta_v_raan_ms']
+                total_raan_delta_v += delta_v_raan
             
-            # RAAN for this carrier (equally spaced)
-            carrier_raan_deg = (carrier_id - 1) * (360 / self.num_carriers)
+            plane_raan_deg = plane_id * raan_separation_deg
             
-            carrier_schedule = {
-                'carrier_id': carrier_id,
-                'inclination_change_time_s': carrier_inclination_time,
-                'inclination_change_time_h': carrier_inclination_hours,
-                'raan_deg': carrier_raan_deg,
-                'satellites': []
+            plane_data = {
+                'plane_id': plane_id + 1,
+                'plane_raan_deg': plane_raan_deg,
+                'raan_change_from_previous_deg': raan_change_deg,
+                'delta_v_raan_ms': delta_v_raan,
+                'satellites_per_plane': 1  # Could be modified for multiple sats per plane
             }
             
-            # Create satellite deployment schedule within this carrier
-            for sat_id in range(1, self.num_satellites_per_carrier + 1):
-                # Time for satellite deployment (relative to carrier's inclination change)
-                sat_deployment_time = carrier_inclination_time + (sat_id - 1) * self.tau
-                sat_deployment_hours = sat_deployment_time / 3600
-                
-                # Satellite burns
-                first_burn_time = sat_deployment_time
-                second_burn_time = sat_deployment_time + self.t_transfer
-                
-                # Angular separation within carrier
-                sat_separation_deg = (sat_id - 1) * self.target_spacing_deg
-                
-                # Global satellite ID
-                global_sat_id = (carrier_id - 1) * self.num_satellites_per_carrier + sat_id
-                
-                satellite_schedule = {
-                    'global_satellite_id': global_sat_id,
-                    'carrier_id': carrier_id,
-                    'satellite_id_in_carrier': sat_id,
-                    'deployment_time_s': sat_deployment_time,
-                    'deployment_time_h': sat_deployment_hours,
-                    'first_burn_time_s': first_burn_time,
-                    'first_burn_time_h': first_burn_time / 3600,
-                    'second_burn_time_s': second_burn_time,
-                    'second_burn_time_h': second_burn_time / 3600,
-                    'separation_in_carrier_deg': sat_separation_deg,
-                    'raan_deg': carrier_raan_deg,
-                    'delta_v1_ms': self.delta_v1 * 1000,
-                    'delta_v2_ms': self.delta_v2 * 1000,
-                    'total_delta_v_ms': self.total_delta_v * 1000
-                }
-                
-                carrier_schedule['satellites'].append(satellite_schedule)
+            planes_data.append(plane_data)
             
-            all_schedules.append(carrier_schedule)
+            print(f"  Plane {plane_id + 1}: RAAN = {plane_raan_deg:.1f}°, "
+                  f"ΔV = {delta_v_raan:.1f} m/s")
         
-        return all_schedules
+        print(f"\nMULTI-PLANE SUMMARY:")
+        print(f"  Total RAAN change Delta-V: {total_raan_delta_v:.1f} m/s")
+        print(f"  Average Delta-V per plane: {total_raan_delta_v/(num_planes-1):.1f} m/s")
+        print(f"  Coverage: {num_planes} equally-spaced orbital planes")
+        
+        return {
+            'num_planes': num_planes,
+            'raan_separation_deg': raan_separation_deg,
+            'planes_data': planes_data,
+            'total_raan_delta_v_ms': total_raan_delta_v,
+            'average_raan_delta_v_ms': total_raan_delta_v/(num_planes-1) if num_planes > 1 else 0
+        }
     
-    def display_mission_analysis(self, insertion_data, deployment_schedules):
-        """Display comprehensive mission analysis for multi-carrier deployment"""
+    def create_deployment_schedule(self):
+        """
+        Create deployment schedule for 6 satellites:
+        1. Deploy all 6 satellites together at the same time in 1084km orbit
+        2. Use staggered Hohmann transfers to achieve 60° spacing in final 1000km orbit
+        """
+        deployment_schedule = {
+            'phase1_deployment': {
+                'description': 'Deploy all satellites together in 1084km orbit',
+                'time_s': 0,
+                'time_h': 0,
+                'satellites': []
+            },
+            'phase2_transfer': {
+                'description': 'Staggered transfers to achieve 60° spacing in 1000km orbit',
+                'satellites': []
+            }
+        }
+        
+        # Phase 1: Deploy all satellites together at t=0
+        for sat_id in range(1, self.num_satellites + 1):
+            satellite_deployment = {
+                'satellite_id': sat_id,
+                'deployment_time_s': 0,  # All deployed at t=0
+                'deployment_time_h': 0,  # All deployed at t=0
+                'initial_angular_position_deg': 0,  # All start at same position
+                'orbit_altitude_km': 1084,
+                'orbit_inclination_deg': 90
+            }
+            
+            deployment_schedule['phase1_deployment']['satellites'].append(satellite_deployment)
+        
+        # Phase 2: Staggered transfers to achieve spacing
+        # Satellites are transferred with time intervals τ to achieve 60° spacing in final orbit
+        stabilization_time = self.T1  # One full orbit for stabilization after deployment
+        
+        for sat_id in range(1, self.num_satellites + 1):
+            # Each satellite starts transfer at staggered intervals
+            # The staggering creates the desired angular separation in the final orbit
+            transfer_start_time = stabilization_time + (sat_id - 1) * self.tau
+            
+            # Transfer burn times
+            first_burn_time = transfer_start_time
+            second_burn_time = transfer_start_time + self.t_transfer
+            
+            # Final angular position due to staggered transfers
+            final_angular_position_deg = (sat_id - 1) * self.target_spacing_deg
+            
+            satellite_transfer = {
+                'satellite_id': sat_id,
+                'transfer_start_time_s': transfer_start_time,
+                'transfer_start_time_h': transfer_start_time / 3600,
+                'first_burn_time_s': first_burn_time,
+                'first_burn_time_h': first_burn_time / 3600,
+                'second_burn_time_s': second_burn_time,
+                'second_burn_time_h': second_burn_time / 3600,
+                'delta_v1_ms': self.delta_v1 * 1000,
+                'delta_v2_ms': self.delta_v2 * 1000,
+                'total_transfer_delta_v_ms': self.total_delta_v * 1000,
+                'final_altitude_km': 1000,
+                'final_inclination_deg': 90,
+                'final_angular_position_deg': final_angular_position_deg
+            }
+            
+            deployment_schedule['phase2_transfer']['satellites'].append(satellite_transfer)
+        
+        return deployment_schedule
+    
+    def display_mission_analysis(self, deployment_schedule):
+        """Display comprehensive mission analysis for constellation deployment"""
         print("\n" + "=" * 80)
         print("MOON COMMUNICATIONS CONSTELLATION DEPLOYMENT ANALYSIS")
         print("=" * 80)
         
         print(f"\nMISSION OVERVIEW:")
-        print(f"   Constellation: {self.total_satellites} satellites ({self.num_carriers} carriers × {self.num_satellites_per_carrier} satellites)")
+        print(f"   Constellation: {self.total_satellites} satellites in single orbital plane")
+        print(f"   Deployment orbit: 1084 km circular, 90 deg inclination")
         print(f"   Final orbits: 1000 km circular, 90 deg inclination")
-        print(f"   Spacing strategy: {self.target_spacing_deg} deg within carriers, {360/self.num_carriers:.1f} deg RAAN separation")
-        print(f"   Deployment method: Staggered carriers + Staggered Hohmann transfers")
+        print(f"   Spacing strategy: {self.target_spacing_deg} deg between satellites")
+        print(f"   Deployment method: Staggered deployment with Hohmann transfers")
         
-        print(f"\nPHASE 1: HYPERBOLIC ORBIT INSERTION")
-        print(f"   Initial state: Hyperbolic approach orbit (28.6 deg inclination)")
-        print(f"   Target: 1764 km circular (at perigee)")
-        print(f"   Insertion Delta-v: {insertion_data['delta_v_insertion']*1000:.1f} m/s")
+        print(f"\nPHASE 1: SATELLITE DEPLOYMENT IN 1084KM ORBIT")
+        print(f"   Deployment orbit: 1084 km altitude, 90 deg inclination")
+        print(f"   Number of satellites: {self.num_satellites}")
+        print(f"   Deployment method: All satellites deployed together at t=0")
+        print(f"   Initial spacing: 0° (all satellites co-located initially)")
+        print(f"   Orbit period: {self.T1_hours:.2f} h")
         
-        print(f"\nPHASE 2: CARRIER INCLINATION CHANGES")
-        print(f"   Inclination change: {insertion_data['inclination_change_deg']:.1f} deg (28.6 deg -> 90 deg)")
-        print(f"   Inclination Delta-v: {insertion_data['delta_v_inclination']*1000:.1f} m/s")
-        print(f"   Carrier staggering: {self.carrier_stagger_hours:.3f} h between carriers")
-        print(f"   RAAN separation: {360/self.num_carriers:.1f} deg per carrier")
+        # Show deployment timeline
+        print(f"\nDEPLOYMENT TIMELINE (1084km orbit):")
+        print(f"   All {self.num_satellites} satellites deployed simultaneously at t=0")
+        print(f"   Initial angular position: 0° for all satellites")
+        print(f"   Stabilization period: {self.T1_hours:.2f} hours (1 orbit)")
         
-        print(f"\nPHASE 3: SATELLITE DEPLOYMENT PER CARRIER")
-        print(f"   Method: Staggered Hohmann transfers (1764 km -> 1000 km)")
-        print(f"   Satellite staggering: {self.tau_hours:.3f} h between satellites within carrier")
+        print(f"\nPHASE 2: STAGGERED HOHMANN TRANSFERS TO 1000KM ORBIT")
+        print(f"   Transfer method: Hohmann transfers (1084 km -> 1000 km)")
+        print(f"   Staggering strategy: Transfers spaced by τ = {self.tau_hours:.3f} h ({self.tau:.1f} s)")
         print(f"   Transfer time: {self.t_transfer_hours:.3f} h per satellite")
+        print(f"   First burn Delta-v: {self.delta_v1*1000:.2f} m/s (retrograde at 1084 km)")
+        print(f"   Second burn Delta-v: {self.delta_v2*1000:.2f} m/s (prograde at 1000 km)")
+        print(f"   Total transfer Delta-v: {self.total_delta_v*1000:.2f} m/s per satellite")
+        print(f"   Spacing mechanism: Staggered transfers create 60° spacing in final orbit")
         
-        # Show carrier summary
-        print(f"\nCARRIER DEPLOYMENT SCHEDULE:")
-        print(f"   {'Carrier':<8} {'RAAN':<8} {'Inc.Change':<12} {'First Sat':<12} {'Last Sat':<12}")
-        print(f"   {'ID':<8} {'(deg)':<8} {'Time (h)':<12} {'Deploy (h)':<12} {'Deploy (h)':<12}")
-        print(f"   {'-'*8} {'-'*8} {'-'*12} {'-'*12} {'-'*12}")
+        # Show transfer timeline
+        print(f"\nSTAGGERED TRANSFER TIMELINE (1084km -> 1000km):")
+        print(f"   {'Sat ID':<8} {'Start Time':<12} {'1st Burn':<12} {'2nd Burn':<12} {'Final Pos':<12}")
+        print(f"   {'#':<8} {'(hours)':<12} {'(hours)':<12} {'(hours)':<12} {'(degrees)':<12}")
+        print(f"   {'-'*8} {'-'*12} {'-'*12} {'-'*12} {'-'*12}")
         
         total_mission_time = 0
-        for carrier in deployment_schedules:
-            first_sat_time = carrier['satellites'][0]['deployment_time_h']
-            last_sat_time = carrier['satellites'][-1]['second_burn_time_h']
-            total_mission_time = max(total_mission_time, last_sat_time)
-            
-            print(f"   {carrier['carrier_id']:<8} {carrier['raan_deg']:<8.1f} "
-                  f"{carrier['inclination_change_time_h']:<12.3f} "
-                  f"{first_sat_time:<12.3f} {last_sat_time:<12.3f}")
+        for sat in deployment_schedule['phase2_transfer']['satellites']:
+            total_mission_time = max(total_mission_time, sat['second_burn_time_h'])
+            print(f"   {sat['satellite_id']:<8} {sat['transfer_start_time_h']:<12.3f} "
+                  f"{sat['first_burn_time_h']:<12.3f} {sat['second_burn_time_h']:<12.3f} "
+                  f"{sat['final_angular_position_deg']:<12.1f}")
         
-        # Delta-V budget
-        hohmann_total = sum(len(carrier['satellites']) for carrier in deployment_schedules) * self.total_delta_v * 1000
+        # Delta-V budget (only transfer maneuvers needed)
+        total_transfer_delta_v = self.num_satellites * self.total_delta_v * 1000
+        total_mission_delta_v = total_transfer_delta_v  # No insertion maneuvers needed
         
         print(f"\nDELTA-V BUDGET:")
-        print(f"   Hyperbolic insertion (all carriers): {insertion_data['delta_v_insertion']*1000:.1f} m/s")
-        print(f"   Inclination changes ({self.num_carriers} carriers): {insertion_data['delta_v_inclination']*1000*self.num_carriers:.1f} m/s")
-        print(f"   Hohmann transfers ({self.total_satellites} satellites): {hohmann_total:.1f} m/s")
-        print(f"   Total constellation Delta-v: {(insertion_data['delta_v_insertion']*1000 + insertion_data['delta_v_inclination']*1000*self.num_carriers + hohmann_total):.1f} m/s")
+        print(f"   Initial orbit setup: 0.0 m/s (already in polar circular orbit)")
+        print(f"   Hohmann transfers ({self.num_satellites} satellites): {total_transfer_delta_v:.1f} m/s")
+        print(f"   Total mission Delta-v: {total_mission_delta_v:.1f} m/s")
         
         print(f"\nMISSION TIMELINE:")
-        print(f"   Total deployment duration: {total_mission_time:.2f} hours")
-        print(f"   First satellite operational: {deployment_schedules[0]['satellites'][0]['second_burn_time_h']:.3f} hours")
-        print(f"   Last satellite operational: {total_mission_time:.2f} hours")
+        phase1_completion = self.T1_hours  # Just stabilization time
+        print(f"   Phase 1 completion: {phase1_completion:.2f} hours (deployment + stabilization)")
+        print(f"   Phase 2 completion: {total_mission_time:.2f} hours (all satellites in final orbit)")
+        print(f"   Total mission duration: {total_mission_time:.2f} hours")
+        
+        # Calculate phase durations for analysis
+        deployment_duration = phase1_completion  # Just stabilization
+        staggered_transfer_duration = total_mission_time - phase1_completion
+        
+        print(f"\nPHASE DURATION ANALYSIS:")
+        print(f"   Deployment + stabilization: {deployment_duration:.2f} hours ({deployment_duration/24:.1f} days)")
+        print(f"   Staggered transfer phase: {staggered_transfer_duration:.2f} hours ({staggered_transfer_duration/24:.1f} days)")
+        print(f"   Transfer staggering span: {(self.num_satellites-1) * self.tau_hours:.2f} hours")
+        print(f"   Individual transfer time: {self.t_transfer_hours:.2f} hours per satellite")
         
         print(f"\nFINAL CONSTELLATION:")
         print(f"   Total satellites: {self.total_satellites}")
         print(f"   Orbit altitude: 1000 km")
         print(f"   Orbit inclination: 90 deg (polar)")
-        print(f"   Orbital planes: {self.num_carriers} (RAAN separated by {360/self.num_carriers:.1f} deg)")
-        print(f"   Satellites per plane: {self.num_satellites_per_carrier} (separated by {self.target_spacing_deg} deg)")
-        print(f"   Coverage: Enhanced global lunar coverage")
-        print(f"   Orbital period: {self.T2_hours:.2f} hours")
-        print(f"   Constellation revisit time: ~{self.T2_hours/(self.total_satellites/6):.2f} hours")
+        print(f"   Orbital planes: 1")
+        print(f"   Satellites per plane: {self.num_satellites} (separated by {self.target_spacing_deg} deg)")
+        print(f"   Coverage: Polar lunar coverage")
+        print(f"   Final orbit period: {self.T2_hours:.2f} hours")
+        print(f"   Constellation revisit time: ~{self.T2_hours/self.num_satellites:.2f} hours")
         
         return {
-            'insertion_data': insertion_data,
-            'deployment_schedules': deployment_schedules,
+            'deployment_schedule': deployment_schedule,
             'mission_summary': {
                 'total_mission_time_h': total_mission_time,
-                'total_constellation_delta_v_ms': (insertion_data['delta_v_insertion']*1000 + 
-                                                  insertion_data['delta_v_inclination']*1000*self.num_carriers + 
-                                                  hohmann_total),
+                'deployment_phase_h': deployment_duration,
+                'staggered_transfer_phase_h': staggered_transfer_duration,
+                'total_mission_delta_v_ms': total_mission_delta_v,
                 'total_satellites': self.total_satellites,
-                'num_carriers': self.num_carriers
+                'deployment_orbit_km': 1084,
+                'final_orbit_km': 1000
             }
         }
     
-    def run_deployment_analysis(self, hyperbolic_orbit_data=None):
+    def run_deployment_analysis(self):
         """
-        Run complete multi-carrier deployment analysis
-        
-        Parameters:
-        - hyperbolic_orbit_data: Optional dictionary with hyperbolic orbit parameters
+        Run complete constellation deployment analysis starting from polar circular orbit at 1084km
         """
         print("MOON CONSTELLATION DEPLOYER")
-        print("Multi-Carrier Staggered Deployment Strategy")
+        print("Deployment from 1084km Polar Circular Orbit")
         print("=" * 50)
         
-        # Default hyperbolic data if not provided (from Transfer_Simulation output)
-        if hyperbolic_orbit_data is None:
-            hyperbolic_orbit_data = {
-                'v_hyp_perigee': 2.077,  # km/s
-                'perigee_altitude': 1764,  # km
-                'eccentricity': 2.081
-            }
-        
-        # Calculate insertion maneuver
-        insertion_data = self.calculate_hyperbolic_insertion_maneuver(hyperbolic_orbit_data)
-        
-        # Create deployment schedule for all carriers
-        deployment_schedules = self.create_deployment_schedule()
+        # Create deployment schedule
+        deployment_schedule = self.create_deployment_schedule()
         
         # Display complete analysis
-        results = self.display_mission_analysis(insertion_data, deployment_schedules)
+        results = self.display_mission_analysis(deployment_schedule)
         
         return results
 
 
-def run_from_transfer_simulation():
+def run_standard_deployment():
     """
-    Run deployment analysis using data from Transfer_Simulation
+    Run standard deployment analysis starting from polar circular orbit at 1084km
     """
-    try:
-        # Import Transfer_Simulation modules
-        from core.interface import get_user_input
-        from operations.earth_operations import calculate_earth_departure_delta_v
-        from operations.trajectory_calculations import lunar_trajectory_calculations
-        from operations.lunar_operations import lunar_soi_calculations, hyperbolic_to_elliptical_conversion
-        
-        print("Getting hyperbolic approach orbit data from Transfer_Simulation...")
-        
-        # Get transfer trajectory data
-        user_inputs = get_user_input()
-        R0 = user_inputs['R0']
-        V0 = user_inputs['V0']
-        gamma0 = user_inputs['gamma0']
-        lambda1 = user_inputs['lambda1']
-        
-        # Calculate trajectory
-        geo_results = lunar_trajectory_calculations(R0, V0, gamma0, lambda1, verbose=False)
-        lunar_results = lunar_soi_calculations(
-            geo_results['r1'], 
-            geo_results['v1'], 
-            geo_results['phi1_deg'],
-            lambda1,
-            geo_results['gamma1_deg'],
-            verbose=False
-        )
-        
-        # Extract hyperbolic data
-        hyperbolic_data = {
-            'v_hyp_perigee': math.sqrt((1 + lunar_results['e_lunar']) * MU_MOON_KMS / lunar_results['rp']),
-            'perigee_altitude': lunar_results['rp'] - MOON_RADIUS_KM,
-            'eccentricity': lunar_results['e_lunar']
-        }
-        
-        print(f"Hyperbolic orbit data retrieved:")
-        print(f"  Velocity at perigee: {hyperbolic_data['v_hyp_perigee']:.3f} km/s")
-        print(f"  Perigee altitude: {hyperbolic_data['perigee_altitude']:.0f} km")
-        print(f"  Eccentricity: {hyperbolic_data['eccentricity']:.3f}")
-        
-        # Run deployment analysis
-        deployer = MoonConstellationDeployer()
-        results = deployer.run_deployment_analysis(hyperbolic_data)
-        
-        return results
-        
-    except ImportError:
-        print("Transfer_Simulation modules not available. Using default hyperbolic data.")
-        deployer = MoonConstellationDeployer()
-        results = deployer.run_deployment_analysis()
-        return results
+    print("Starting constellation deployment from existing polar circular orbit...")
+    
+    deployer = MoonConstellationDeployer()
+    results = deployer.run_deployment_analysis()
+    
+    return results
+
+
+def test_raan_change_analysis():
+    """Test function for RAAN change analysis"""
+    print("RAAN CHANGE ANALYSIS TEST")
+    print("=" * 50)
+    
+    deployer = MoonConstellationDeployer()
+    
+    # Calculate RAAN change for 360/7 degrees
+    raan_change_deg = 360.0 / 7
+    raan_data = deployer.calculate_raan_change_maneuver(raan_change_deg)
+    
+    # Calculate multi-plane deployment
+    multi_plane_data = deployer.calculate_multi_plane_deployment(num_planes=7)
+    
+    return raan_data, multi_plane_data
 
 
 def main():
     """Main function"""
-    print("Select deployment analysis mode:")
-    print("1. Use Transfer_Simulation data (interactive)")
-    print("2. Use default hyperbolic orbit data")
+    print("Select analysis mode:")
+    print("1. Standard constellation deployment (from 1084km polar orbit)")
+    print("2. RAAN change analysis (multi-plane deployment)")
     
     try:
         choice = input("Enter choice (1 or 2): ").strip()
         
-        if choice == '1':
-            results = run_from_transfer_simulation()
+        if choice == '2':
+            results = test_raan_change_analysis()
         else:
-            deployer = MoonConstellationDeployer()
-            results = deployer.run_deployment_analysis()
+            results = run_standard_deployment()
             
         return results
         
@@ -422,9 +484,8 @@ def main():
         return None
     except Exception as e:
         print(f"Error: {e}")
-        # Fallback to default analysis
-        deployer = MoonConstellationDeployer()
-        results = deployer.run_deployment_analysis()
+        # Fallback to standard deployment
+        results = run_standard_deployment()
         return results
 
 
