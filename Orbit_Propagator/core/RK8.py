@@ -16,8 +16,8 @@ CURRENT IMPLEMENTATION STATUS:
 - High-precision orbital mechanics integration (8th-order accuracy)
 - Comprehensive coefficient tables from literature
 
-⚠️ FRAMEWORK READY (NO IMPLEMENTATIONS):
-- Perturbation support infrastructure (same as RK4)
+⚠️ FRAMEWORK READY:
+- Perturbation support infrastructure 
 - Modular perturbation function interface
 
 ❌ NOT YET IMPLEMENTED:
@@ -26,7 +26,7 @@ CURRENT IMPLEMENTATION STATUS:
 
 PHYSICS MODELED:
 ===============
-Currently: Pure two-body problem (same as RK4)
+Currently: Pure two-body problem
 - Central body: Point-mass Earth (or other celestial body)
 - Satellite: Point-mass with no attitude dynamics  
 - Force: Inverse-square gravitational attraction only
@@ -40,11 +40,11 @@ NUMERICAL METHOD:
 - Local error: O(h⁹), Global error: O(h⁸)
 - Superior accuracy for high-precision applications
 
-COMPARISON WITH RK4:
-===================
-- Accuracy: ~1000x better than RK4 for same step size
-- Cost: ~3x more expensive per step (13 vs 4 evaluations)
-- Efficiency: Better accuracy/cost ratio for precision-critical applications
+PERFORMANCE CHARACTERISTICS:
+===========================
+- Ultra-high accuracy: 8th-order precision
+- Computational cost: 13 evaluations per step (Dormand-Prince method)
+- Excellent for precision-critical applications  
 - Use cases: Long-term integrations, high-eccentricity orbits, precision studies
 
 INTENDED USE:
@@ -59,10 +59,67 @@ Date: October 2025
 """
 
 import numpy as np
-from .Constants import MU_EARTH, MIN_TIME_STEP, MAX_TIME_STEP
 
-# Import orbital equations from RK4 module
-from .RK4 import orbital_equations_of_motion, perturbed_orbital_equations
+try:
+    from .Constants import MU_EARTH, MIN_TIME_STEP, MAX_TIME_STEP
+except ImportError:
+    # Fallback to absolute imports when running directly
+    from Constants import MU_EARTH, MIN_TIME_STEP, MAX_TIME_STEP
+
+# =============================================================================
+# ORBITAL EQUATIONS OF MOTION (RK8 INDEPENDENT)
+# =============================================================================
+
+def orbital_equations_of_motion(t, state, mu=MU_EARTH):
+    """
+    Orbital equations of motion for two-body problem.
+    
+    Implements the fundamental equation: d²r/dt² = -μr/|r|³
+    
+    Args:
+        t (float): Time [s] (not used in two-body problem)
+        state (np.ndarray): State vector [x, y, z, vx, vy, vz] [km, km/s]
+        mu (float): Gravitational parameter [km³/s²]
+        
+    Returns:
+        np.ndarray: State derivative [vx, vy, vz, ax, ay, az]
+    """
+    # Extract position and velocity
+    r = state[:3]  # Position vector [x, y, z]
+    v = state[3:]  # Velocity vector [vx, vy, vz]
+    
+    # Calculate distance and acceleration
+    r_magnitude = np.linalg.norm(r)
+    a = -mu * r / (r_magnitude**3)  # Gravitational acceleration
+    
+    # Return state derivative: [dr/dt, dv/dt] = [v, a]
+    return np.concatenate([v, a])
+
+def perturbed_orbital_equations(t, state, mu=MU_EARTH, perturbations=None):
+    """
+    Orbital equations of motion with perturbations.
+    
+    Args:
+        t (float): Time [s]
+        state (np.ndarray): State vector [x, y, z, vx, vy, vz] [km, km/s]
+        mu (float): Gravitational parameter [km³/s²]
+        perturbations (list): List of perturbation functions
+        
+    Returns:
+        np.ndarray: State derivative including perturbations
+    """
+    # Two-body acceleration (primary gravitational force)
+    state_dot = orbital_equations_of_motion(t, state, mu)
+    
+    # Add perturbations if provided
+    if perturbations is not None:
+        for perturbation_func in perturbations:
+            # Each perturbation function should return acceleration vector [ax, ay, az]
+            perturb_accel = perturbation_func(t, state)
+            # Add perturbation accelerations to the total acceleration (indices 3:6)
+            state_dot[3:] += perturb_accel
+    
+    return state_dot
 
 # =============================================================================
 # RUNGE-KUTTA 8TH ORDER COEFFICIENTS (DORMAND-PRINCE 8(7))
@@ -159,10 +216,10 @@ def rk8_step(func, t, y, h, *args):
     - Each k evaluation computes [v, a] at different time/state points
     - Much higher precision than RK4 for same step size
     
-    Performance vs RK4:
-    - Cost: ~3x more expensive (13 vs 4 evaluations)
-    - Accuracy: ~1000x better for same step size
-    - Efficiency: Superior for precision-critical applications
+    Performance Characteristics:
+    - Cost: 13 function evaluations per step
+    - Accuracy: 8th-order precision with embedded error estimation
+    - Efficiency: Excellent for precision-critical applications
     
     Args:
         func (callable): Function to integrate (dy/dt = func(t, y, *args))
@@ -427,23 +484,19 @@ def propagate_orbit_rk8(initial_state, time_span, step_size, mu=MU_EARTH,
     - ⚠️ Perturbations framework - FRAMEWORK READY, NO SPECIFIC PERTURBATIONS
     
     Accuracy Characteristics:
-    - 8th-order accurate (vs 4th-order for RK4)
-    - ~1000x better precision than RK4 for same step size
+    - 8th-order accurate integration method
+    - Ultra-high precision for orbital mechanics applications
     - Embedded error estimation for automatic step size control
     - Ideal for long-term propagation and high-eccentricity orbits
     
     Computational Cost:
-    - ~3x more expensive per step than RK4 (13 vs 4 evaluations)
-    - Much better accuracy/cost ratio for precision applications
-    - Recommended when accuracy is more important than speed
+    - 13 function evaluations per step (Dormand-Prince 8(7) method)
+    - Excellent accuracy/cost ratio for precision applications
+    - Recommended when accuracy is critical
     
     Physics Modeled:
     - Primary: Central body gravitational attraction (inverse square law)
-    - Perturbations: None currently implemented (defaults to ideal Keplerian motion)
-    
-    Comparison with RK4:
-    - Use RK8 for: High precision studies, long-term propagation, benchmarking
-    - Use RK4 for: Real-time applications, preliminary analysis, education
+    - Perturbations: Framework ready for additional forces
     
     Args:
         initial_state (np.ndarray): Initial state [x, y, z, vx, vy, vz] [km, km/s]
@@ -494,7 +547,7 @@ def propagate_orbit_rk8(initial_state, time_span, step_size, mu=MU_EARTH,
     else:
         # FIXED STEP INTEGRATION: Constant step size (8th-order precision)
         # Predictable computational cost with very high accuracy
-        # Excellent for convergence studies and algorithm comparison
+        # Excellent for convergence studies and high-precision analysis
         times, states = rk8_integrate(
             eom, time_span, initial_state, step_size,
             save_intermediate=True
@@ -507,72 +560,42 @@ def propagate_orbit_rk8(initial_state, time_span, step_size, mu=MU_EARTH,
         return times, positions, velocities
 
 # =============================================================================
-# COMPARISON UTILITIES
+# RK8 PERFORMANCE ANALYSIS 
 # =============================================================================
 
-def compare_rk4_rk8(initial_state, time_span, step_size, mu=MU_EARTH):
+def analyze_rk8_performance(initial_state, time_span, step_sizes, mu=MU_EARTH):
     """
-    Compare RK4 and RK8 integration for the same problem.
+    Analyze RK8 performance across different step sizes.
     
     Args:
         initial_state (np.ndarray): Initial state vector
         time_span (tuple): Integration time span
-        step_size (float): Step size
+        step_sizes (list): List of step sizes to test
         mu (float): Gravitational parameter
         
     Returns:
-        dict: Comparison results
+        dict: Performance analysis results
     """
-    from .RK4 import propagate_orbit_rk4
     import time
     
-    # RK4 integration
-    start_time = time.time()
-    times_rk4, pos_rk4, vel_rk4 = propagate_orbit_rk4(
-        initial_state, time_span, step_size, mu
-    )
-    rk4_time = time.time() - start_time
+    results = {}
     
-    # RK8 integration
-    start_time = time.time()
-    times_rk8, pos_rk8, vel_rk8 = propagate_orbit_rk8(
-        initial_state, time_span, step_size, mu
-    )
-    rk8_time = time.time() - start_time
-    
-    # Interpolate RK4 results to RK8 time points if different
-    if len(times_rk4) != len(times_rk8):
-        from scipy.interpolate import interp1d
+    for step_size in step_sizes:
+        start_time = time.time()
+        times, pos, vel = propagate_orbit_rk8(
+            initial_state, time_span, step_size, mu
+        )
+        computation_time = time.time() - start_time
         
-        # Interpolate RK4 to RK8 times
-        interp_func_pos = interp1d(times_rk4, pos_rk4, axis=0, kind='cubic')
-        interp_func_vel = interp1d(times_rk4, vel_rk4, axis=0, kind='cubic')
-        
-        pos_rk4_interp = interp_func_pos(times_rk8)
-        vel_rk4_interp = interp_func_vel(times_rk8)
-    else:
-        pos_rk4_interp = pos_rk4
-        vel_rk4_interp = vel_rk4
+        results[step_size] = {
+            'times': times,
+            'positions': pos,
+            'velocities': vel,
+            'computation_time': computation_time,
+            'num_steps': len(times)
+        }
     
-    # Calculate differences
-    pos_diff = np.linalg.norm(pos_rk8 - pos_rk4_interp, axis=1)
-    vel_diff = np.linalg.norm(vel_rk8 - vel_rk4_interp, axis=1)
-    
-    return {
-        'times': times_rk8,
-        'rk4_positions': pos_rk4_interp,
-        'rk4_velocities': vel_rk4_interp,
-        'rk8_positions': pos_rk8,
-        'rk8_velocities': vel_rk8,
-        'position_differences': pos_diff,
-        'velocity_differences': vel_diff,
-        'max_position_difference': np.max(pos_diff),
-        'max_velocity_difference': np.max(vel_diff),
-        'rk4_computation_time': rk4_time,
-        'rk8_computation_time': rk8_time,
-        'rk4_steps': len(times_rk4),
-        'rk8_steps': len(times_rk8)
-    }
+    return results
 
 if __name__ == "__main__":
     # Test the RK8 integrator with analytical validation
@@ -596,23 +619,24 @@ if __name__ == "__main__":
     # Compare with analytical solution
     x_analytical = np.cos(times)
     
-    # Check error (should be MUCH smaller than RK4 for same step size)
+    # Check error (should be extremely small due to 8th-order accuracy)
     x_numerical = states[:, 0]
     error = np.max(np.abs(x_numerical - x_analytical))
     
     print(f"Maximum error in harmonic oscillator: {error:.2e}")
     print("RK8 integrator test completed successfully!")
     
-    # Demonstrate superior accuracy compared to larger step sizes
-    print("\nAccuracy demonstration:")
+    # Demonstrate accuracy scaling with step size
+    print("\nStep size accuracy analysis:")
     times_coarse, states_coarse = rk8_integrate(harmonic_oscillator, t_span, y0, 0.5)
     x_coarse = states_coarse[:, 0]
     x_analytical_coarse = np.cos(times_coarse)
     error_coarse = np.max(np.abs(x_coarse - x_analytical_coarse))
     
-    print(f"Error with larger step size (0.5): {error_coarse:.2e}")
-    print(f"Improvement ratio: {error_coarse/error:.1f}")
+    print(f"Error with step size 0.1: {error:.2e}")
+    print(f"Error with step size 0.5: {error_coarse:.2e}")
+    print(f"Error reduction ratio: {error_coarse/error:.1f}")
     
     # NOTE: For orbital mechanics, this same RK8 algorithm will integrate:
     # d²r/dt² = -μr/|r|³ (two-body problem) with 8th-order accuracy
-    # Expected performance: ~1000x better than RK4 for same step size
+    # Providing ultra-high precision for satellite orbit propagation

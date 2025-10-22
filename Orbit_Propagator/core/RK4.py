@@ -55,7 +55,12 @@ Date: October 2025
 """
 
 import numpy as np
-from .Constants import MU_EARTH, MIN_TIME_STEP, MAX_TIME_STEP
+
+try:
+    from .Constants import MU_EARTH, MIN_TIME_STEP, MAX_TIME_STEP
+except ImportError:
+    # Fallback to absolute imports when running directly
+    from Constants import MU_EARTH, MIN_TIME_STEP, MAX_TIME_STEP
 
 # =============================================================================
 # ORBITAL EQUATIONS OF MOTION
