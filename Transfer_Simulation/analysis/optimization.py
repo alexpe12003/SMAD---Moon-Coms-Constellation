@@ -6,7 +6,6 @@ import numpy as np
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from core.config import DEFAULT_TARGET_PERIGEE_ALTITUDE
 from operations.earth_operations import calculate_earth_departure_delta_v
 from operations.trajectory_calculations import lunar_trajectory_calculations
 from operations.lunar_operations import lunar_soi_calculations, calculate_lunar_soi_transit_time, hyperbolic_to_elliptical_conversion
@@ -14,16 +13,20 @@ from operations.lunar_operations import lunar_soi_calculations, calculate_lunar_
 
 def multi_parameter_optimization(num_steps=360):
     """
-    Comprehensive optimization function that varies R0, V0, gamma0, and lambda1
+    Comprehensive optimization function that varies gamma0 and lambda1
     to find the optimal combination that minimizes mission delta-V.
+    
+    Orbit insertion logic:
+    - If natural perigee ≤ 1500km: Creates elliptical orbit with apoapsis at 1500km
+    - If natural perigee > 1500km: Circularizes at natural perigee altitude
     
     Parameters:
     - num_steps: Number of steps for the optimization (minimum 360)
     
     Parameter ranges:
     - R0: Fixed at 1.05 DU
-    - V0: 1.372 to 2.0 DU/TU
-    - gamma0: 0 to 90 degrees
+    - V0: Fixed at 1.372 DU/TU
+    - gamma0: 0 to 20 degrees
     - lambda1: 0 to 360 degrees
     
     Returns:
@@ -35,26 +38,25 @@ def multi_parameter_optimization(num_steps=360):
     
     # Fixed parameters
     R0 = 1.05  # DU - Fixed as requested
+    V0 = 1.372  # DU/TU - Fixed as requested
     
     # Variable parameter ranges
-    V0_min, V0_max = 1.372, 2.0  # DU/TU
-    gamma0_min, gamma0_max = 0, 90  # degrees
-    lambda1_min, lambda1_max = 0, 360  # degrees
+    gamma0_min, gamma0_max = 0, 15  # degrees (reasonable range for flight path angles)
+    lambda1_min, lambda1_max = 0, 360  # degrees (full range of lunar longitudes)
     
-    # Calculate steps per parameter (cube root for 3D parameter space)
-    steps_per_param = int(np.ceil(num_steps ** (1/3)))
-    total_combinations = steps_per_param ** 3
+    # Calculate steps per parameter (square root for 2D parameter space)
+    steps_per_param = int(np.ceil(num_steps ** (1/2)))
+    total_combinations = steps_per_param ** 2
     
     print(f"Parameter ranges:")
     print(f"  R0: {R0} DU (fixed)")
-    print(f"  V0: {V0_min} to {V0_max} DU/TU ({steps_per_param} steps)")
+    print(f"  V0: {V0} DU/TU (fixed)")
     print(f"  gamma0: {gamma0_min}° to {gamma0_max}° ({steps_per_param} steps)")
     print(f"  lambda1: {lambda1_min}° to {lambda1_max}° ({steps_per_param} steps)")
     print(f"Total combinations: {total_combinations}")
     print()
     
     # Create parameter grids
-    V0_values = np.linspace(V0_min, V0_max, steps_per_param)
     gamma0_values = np.linspace(gamma0_min, gamma0_max, steps_per_param)
     lambda1_values = np.linspace(lambda1_min, lambda1_max, steps_per_param)
     
@@ -66,84 +68,122 @@ def multi_parameter_optimization(num_steps=360):
     # Progress tracking
     calculation_count = 0
     successful_calculations = 0
+    collision_count = 0
+    invalid_count = 0
     
     print("Starting optimization calculations...")
     
-    for i, V0 in enumerate(V0_values):
-        for j, gamma0 in enumerate(gamma0_values):
-            for k, lambda1 in enumerate(lambda1_values):
-                calculation_count += 1
+    for i, gamma0 in enumerate(gamma0_values):
+        for j, lambda1 in enumerate(lambda1_values):
+            calculation_count += 1
+            
+            try:
+                # Calculate Earth departure delta-V
+                departure_results = calculate_earth_departure_delta_v(R0, V0, verbose=False)
+                earth_departure_dv = departure_results['delta_v_departure_kms']
                 
-                try:
-                    # Calculate Earth departure delta-V
-                    departure_results = calculate_earth_departure_delta_v(R0, V0, verbose=False)
-                    earth_departure_dv = departure_results['delta_v_departure_kms']
-                    
-                    # Perform geocentric trajectory calculations
-                    geo_results = lunar_trajectory_calculations(R0, V0, gamma0, lambda1, verbose=False)
-                    
-                    # Perform lunar SOI calculations
-                    lunar_results = lunar_soi_calculations(
-                        geo_results['r1'], 
-                        geo_results['v1'], 
-                        geo_results['phi1_deg'],
-                        lambda1,
-                        geo_results['gamma1_deg'],
-                        verbose=False
-                    )
-                    
-                    # Calculate SOI transit time
-                    soi_transit_results = calculate_lunar_soi_transit_time(lunar_results, verbose=False)
-                    
-                    # Calculate hyperbolic to elliptical conversion
-                    elliptical_results = hyperbolic_to_elliptical_conversion(
-                        lunar_results, 
-                        target_perigee_altitude_km=DEFAULT_TARGET_PERIGEE_ALTITUDE, 
-                        verbose=False
-                    )
-                    
-                    # Calculate total mission delta-V and time
-                    total_delta_v = earth_departure_dv + elliptical_results['total_delta_v']
-                    total_time = geo_results['tof_hours'] + soi_transit_results['soi_transit_time_hours']
-                    
-                    # Store result
-                    result = {
-                        'R0': R0,
-                        'V0': V0,
-                        'gamma0': gamma0,
-                        'lambda1': lambda1,
-                        'earth_departure_dv': earth_departure_dv,
-                        'lunar_dv': elliptical_results['total_delta_v'],
-                        'total_delta_v': total_delta_v,
-                        'total_time_hours': total_time,
-                        'geo_tof_hours': geo_results['tof_hours'],
-                        'soi_transit_hours': soi_transit_results['soi_transit_time_hours']
-                    }
-                    
-                    results.append(result)
-                    successful_calculations += 1
-                    
-                    # Check if this is the best result so far
-                    if total_delta_v < min_delta_v:
-                        min_delta_v = total_delta_v
-                        best_result = result.copy()
-                        
-                        print(f"New best found! ΔV = {total_delta_v:.3f} km/s")
-                        print(f"  V0 = {V0:.3f} DU/TU, γ0 = {gamma0:.1f}°, λ1 = {lambda1:.1f}°")
-                    
-                except Exception as e:
-                    # Skip failed calculations silently
+                # Perform geocentric trajectory calculations
+                geo_results = lunar_trajectory_calculations(R0, V0, gamma0, lambda1, verbose=False)
+                
+                # Perform lunar SOI calculations
+                lunar_results = lunar_soi_calculations(
+                    geo_results['r1'], 
+                    geo_results['v1'], 
+                    geo_results['phi1_deg'],
+                    lambda1,
+                    geo_results['gamma1_deg'],
+                    verbose=False
+                )
+                
+                # Early collision check - validate hyperbolic perigee altitude
+                rp_hyp = lunar_results.get('rp', 0)  # Perigee radius in km
+                MOON_RADIUS_KM = 1737.0
+                if rp_hyp < MOON_RADIUS_KM:
+                    # Skip collision trajectories immediately
+                    collision_count += 1
                     continue
                 
-                # Progress update every 100 calculations
-                if calculation_count % 100 == 0:
-                    success_rate = (successful_calculations / calculation_count) * 100
-                    print(f"Progress: {calculation_count}/{total_combinations} ({calculation_count/total_combinations*100:.1f}%) - Success rate: {success_rate:.1f}%")
+                # Calculate SOI transit time
+                soi_transit_results = calculate_lunar_soi_transit_time(lunar_results, verbose=False)
+                
+                # Calculate hyperbolic to orbit conversion (1500km apoapsis logic)
+                elliptical_results = hyperbolic_to_elliptical_conversion(
+                    lunar_results, 
+                    verbose=False
+                )
+                
+                # Double-check for collision trajectory
+                if (elliptical_results.get('error') == 'COLLISION_TRAJECTORY' or 
+                    elliptical_results.get('collision', False) or
+                    elliptical_results.get('total_delta_v', 0) == float('inf')):
+                    # Skip this parameter combination - it results in Moon collision
+                    collision_count += 1
+                    continue
+                
+                # Validate delta-V is reasonable (not infinite or extremely high)
+                lunar_dv = elliptical_results.get('total_delta_v', float('inf'))
+                if not isinstance(lunar_dv, (int, float)) or lunar_dv == float('inf') or lunar_dv > 10.0:
+                    # Skip unreasonable delta-V values (> 10 km/s is suspicious)
+                    invalid_count += 1
+                    continue
+                
+                # Calculate total mission delta-V and time
+                total_delta_v = earth_departure_dv + lunar_dv
+                total_time = geo_results['tof_hours'] + soi_transit_results['soi_transit_time_hours']
+                
+                # Final validation - ensure total delta-V is reasonable
+                if total_delta_v > 15.0 or not isinstance(total_delta_v, (int, float)):
+                    # Skip unreasonably high total delta-V (> 15 km/s is suspicious)
+                    invalid_count += 1
+                    continue
+                
+                # Store result
+                result = {
+                    'R0': R0,
+                    'V0': V0,
+                    'gamma0': gamma0,
+                    'lambda1': lambda1,
+                    'earth_departure_dv': earth_departure_dv,
+                    'lunar_dv': lunar_dv,
+                    'total_delta_v': total_delta_v,
+                    'total_time_hours': total_time,
+                    'geo_tof_hours': geo_results['tof_hours'],
+                    'soi_transit_hours': soi_transit_results['soi_transit_time_hours'],
+                    'rp_hyperbolic_km': rp_hyp,
+                    'orbit_type': elliptical_results.get('orbit_type', 'unknown')
+                }
+                
+                results.append(result)
+                successful_calculations += 1
+                
+                # Check if this is the best result so far
+                if total_delta_v < min_delta_v:
+                    min_delta_v = total_delta_v
+                    best_result = result.copy()
+                    
+                    print(f"New best found! ΔV = {total_delta_v:.3f} km/s")
+                    print(f"  V0 = {V0:.3f} DU/TU, γ0 = {gamma0:.1f}°, λ1 = {lambda1:.1f}°")
+                
+            except Exception as e:
+                # Skip failed calculations silently
+                continue
+            
+            # Progress update every 1000 calculations
+            if calculation_count % 1000 == 0:
+                success_rate = (successful_calculations / calculation_count) * 100
+                collision_rate = (collision_count / calculation_count) * 100
+                invalid_rate = (invalid_count / calculation_count) * 100
+                print(f"Progress: {calculation_count}/{total_combinations} ({calculation_count/total_combinations*100:.1f}%)")
+                print(f"  Success: {success_rate:.1f}% | Collisions: {collision_rate:.1f}% | Invalid: {invalid_rate:.1f}%")
     
     print(f"\nOptimization complete!")
     print(f"Total calculations attempted: {calculation_count}")
     print(f"Successful calculations: {successful_calculations}")
+    print(f"Collision trajectories: {collision_count}")
+    print(f"Invalid trajectories: {invalid_count}")
     print(f"Success rate: {(successful_calculations/calculation_count)*100:.1f}%")
+    print(f"Collision rate: {(collision_count/calculation_count)*100:.1f}%")
+    print(f"Invalid rate: {(invalid_count/calculation_count)*100:.1f}%")
     
     if best_result is None:
         print("ERROR: No successful calculations found!")
@@ -159,6 +199,11 @@ def multi_parameter_optimization(num_steps=360):
     print(f"  V0 = {best_result['V0']:.3f} DU/TU")
     print(f"  γ0 = {best_result['gamma0']:.1f}°")
     print(f"  λ1 = {best_result['lambda1']:.1f}°")
+    print(f"\nTrajectory Validation:")
+    print(f"  Hyperbolic Perigee: {best_result.get('rp_hyperbolic_km', 'N/A'):.1f} km")
+    print(f"  Moon Radius: 1737.0 km")
+    print(f"  Safety Margin: {best_result.get('rp_hyperbolic_km', 0) - 1737.0:.1f} km")
+    print(f"  Orbit Type: {best_result.get('orbit_type', 'unknown').title()}")
     print(f"\nMission Breakdown:")
     print(f"  Earth Departure ΔV: {best_result['earth_departure_dv']:.3f} km/s")
     print(f"  Lunar Operations ΔV: {best_result['lunar_dv']:.3f} km/s")
@@ -189,7 +234,11 @@ def multi_parameter_optimization(num_steps=360):
         'statistics': {
             'total_calculations': calculation_count,
             'successful_calculations': successful_calculations,
+            'collision_count': collision_count,
+            'invalid_count': invalid_count,
             'success_rate': (successful_calculations/calculation_count)*100,
+            'collision_rate': (collision_count/calculation_count)*100,
+            'invalid_rate': (invalid_count/calculation_count)*100,
             'min_delta_v': np.min([r['total_delta_v'] for r in results]),
             'max_delta_v': np.max([r['total_delta_v'] for r in results]),
             'mean_delta_v': np.mean([r['total_delta_v'] for r in results]),

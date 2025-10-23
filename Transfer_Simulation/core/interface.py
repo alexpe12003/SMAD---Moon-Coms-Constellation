@@ -95,21 +95,36 @@ def display_organized_mission_summary(inputs, departure_results, geo_results, lu
     print(f"   SOI Entry to Perigee Time: {soi_transit_results['soi_transit_time_hours']:.2f} hours")
     print(f"   Natural Flyby Altitude: {lunar_results['hp']:.0f} km above surface")
     
-    # Step 4: Lunar Orbit Insertion (if circular conversion provided)
+    # Step 4: Lunar Orbit Insertion (if orbit conversion provided)
     if elliptical_results:
-        print(f"\n🛰️ STEP 4: LUNAR ORBIT CIRCULARIZATION")
-        print(f"   Maneuver Location: {elliptical_results['hp_hyperbolic']:.0f} km altitude")
-        print(f"   Hyperbolic Velocity: {elliptical_results['v_hyp_perigee']:.3f} km/s")
-        print(f"   Circular Velocity: {elliptical_results['v_circular']:.3f} km/s")
-        print(f"   Delta-V Required: {elliptical_results['delta_v_magnitude']:.3f} km/s")
-        print(f"   Resulting Orbit: {elliptical_results['hp_circular']:.0f} km circular")
-        print(f"   Orbital Period: {elliptical_results['circular_period_hours']:.2f} hours")
+        orbit_type = elliptical_results.get('orbit_type', 'circular')
+        
+        if orbit_type == 'elliptical':
+            print(f"\n🛰️ STEP 4: LUNAR ORBIT INSERTION (ELLIPTICAL)")
+            print(f"   Maneuver Location: {elliptical_results.get('maneuver_altitude_km', elliptical_results['hp_hyperbolic']):.0f} km altitude")
+            print(f"   Hyperbolic Velocity: {elliptical_results['v_hyp_perigee']:.3f} km/s")
+            print(f"   Target Orbit Velocity: {elliptical_results.get('v_final', elliptical_results['v_circular']):.3f} km/s")
+            print(f"   Delta-V Required: {elliptical_results['delta_v_magnitude']:.3f} km/s")
+            print(f"   Resulting Orbit: {elliptical_results.get('final_hp', elliptical_results['hp_circular']):.0f} km × {elliptical_results.get('final_ha', 1500):.0f} km elliptical")
+            print(f"   Orbital Period: {elliptical_results.get('final_period_hours', elliptical_results['circular_period_hours']):.2f} hours")
+        else:
+            print(f"\n🛰️ STEP 4: LUNAR ORBIT CIRCULARIZATION")
+            print(f"   Maneuver Location: {elliptical_results['hp_hyperbolic']:.0f} km altitude")
+            print(f"   Hyperbolic Velocity: {elliptical_results['v_hyp_perigee']:.3f} km/s")
+            print(f"   Circular Velocity: {elliptical_results['v_circular']:.3f} km/s")
+            print(f"   Delta-V Required: {elliptical_results['delta_v_magnitude']:.3f} km/s")
+            print(f"   Resulting Orbit: {elliptical_results['hp_circular']:.0f} km circular")
+            print(f"   Orbital Period: {elliptical_results['circular_period_hours']:.2f} hours")
     
     # Mission Summary
     print(f"\n📊 COMPLETE MISSION SUMMARY:")
     print(f"   Earth Departure Delta-V: {departure_results['delta_v_departure_kms']:.3f} km/s")
     if elliptical_results:
-        print(f"   Lunar Circularization Delta-V: {elliptical_results['total_delta_v']:.3f} km/s")
+        orbit_type = elliptical_results.get('orbit_type', 'circular')
+        if orbit_type == 'elliptical':
+            print(f"   Lunar Orbit Insertion Delta-V: {elliptical_results['total_delta_v']:.3f} km/s")
+        else:
+            print(f"   Lunar Circularization Delta-V: {elliptical_results['total_delta_v']:.3f} km/s")
         total_mission_dv = departure_results['delta_v_departure_kms'] + elliptical_results['total_delta_v']
         print(f"   TOTAL MISSION DELTA-V: {total_mission_dv:.3f} km/s")
     
@@ -119,7 +134,13 @@ def display_organized_mission_summary(inputs, departure_results, geo_results, lu
     print(f"   TOTAL MISSION DURATION: {total_mission_time:.1f} hours")
     
     if elliptical_results:
-        print(f"   Final Orbit: {elliptical_results['hp_circular']:.0f} km circular")
+        orbit_type = elliptical_results.get('orbit_type', 'circular')
+        if orbit_type == 'elliptical':
+            perigee = elliptical_results.get('final_hp', elliptical_results['hp_circular'])
+            apoapsis = elliptical_results.get('final_ha', 1500)
+            print(f"   Final Orbit: {perigee:.0f} km × {apoapsis:.0f} km elliptical")
+        else:
+            print(f"   Final Orbit: {elliptical_results['hp_circular']:.0f} km circular")
     
     print("=" * 80)
 
@@ -138,17 +159,19 @@ def display_analysis_menu():
     print("Choose analysis type:")
     print("1. Single calculation with user-defined lambda1")
     print("2. Parametric study: lambda1 from 0-360° (5° steps)")
-    print("3. Multi-parameter optimization: V0, gamma0, lambda1")
+    print("3. Optimal parameters calculation (R0=1.05, V0=1.372, γ0=0.0°, λ1=240.0°)")
+    print("4. Multi-parameter optimization: V0, gamma0, lambda1")
+    print("5. Fixed V0 optimization: gamma0, lambda1 (V0=1.372 DU/TU)")
     
     while True:
         try:
-            choice = input("Enter choice (1, 2, or 3): ").strip()
-            if choice in ['1', '2', '3']:
+            choice = input("Enter choice (1, 2, 3, 4, or 5): ").strip()
+            if choice in ['1', '2', '3', '4', '5']:
                 return choice
             else:
-                print("Please enter 1, 2, or 3")
+                print("Please enter 1, 2, 3, 4, or 5")
         except:
-            print("Please enter 1, 2, or 3")
+            print("Please enter 1, 2, 3, 4, or 5")
 
 
 def get_optimization_parameters():

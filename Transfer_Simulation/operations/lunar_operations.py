@@ -172,16 +172,22 @@ def lunar_soi_calculations(r1, v1, phi1_deg, lambda1_deg, gamma1_deg, verbose=Tr
     }
 
 
-def hyperbolic_to_elliptical_conversion(lunar_results, verbose=True):
+def hyperbolic_to_elliptical_conversion(lunar_results, target_perigee_altitude_km=None, verbose=True):
     """
-    Calculate the maneuver required to convert from hyperbolic flyby to circular orbit at perigee
+    Convert hyperbolic trajectory to either elliptical or circular orbit
+    
+    Logic:
+    - If natural perigee altitude < 1500km: Create ellipse with natural perigee and apoapsis at 1500km  
+    - If natural perigee altitude ≥ 1500km: Circularize at natural perigee
+    - Collision detection: Returns error if perigee is inside Moon (< 1737 km radius)
     
     Parameters:
     - lunar_results: Dictionary containing lunar trajectory analysis results
+    - target_perigee_altitude_km: Ignored parameter (kept for compatibility)
     - verbose: Whether to print detailed output
     
     Returns:
-    - Dictionary containing conversion analysis results
+    - Dictionary containing conversion analysis results, or error dict for collisions
     """
     
     # Extract lunar trajectory parameters
@@ -190,19 +196,80 @@ def hyperbolic_to_elliptical_conversion(lunar_results, verbose=True):
     h_hyp = lunar_results['h_lunar']  # Current angular momentum
     hp_hyp = lunar_results['hp']  # Current hyperbolic perigee altitude
     
+    # COLLISION DETECTION: Check if trajectory passes through Moon
+    if rp_hyp < MOON_RADIUS_KM:
+        if verbose:
+            print("=" * 60)
+            print("❌ COLLISION TRAJECTORY DETECTED!")
+            print("=" * 60)
+            print(f"Hyperbolic perigee radius: {rp_hyp:.1f} km")
+            print(f"Moon radius: {MOON_RADIUS_KM:.1f} km")
+            print(f"Perigee altitude: {hp_hyp:.1f} km (NEGATIVE - INSIDE MOON!)")
+            print(f"❌ ERROR: Cannot create orbit from collision trajectory")
+            print(f"   The spacecraft would crash into the Moon's surface.")
+            print(f"   Different mission parameters are required for a safe flyby.")
+        
+        # Return error result
+        return {
+            'error': 'COLLISION_TRAJECTORY',
+            'error_message': f'Hyperbolic perigee ({rp_hyp:.1f} km) is below Moon surface ({MOON_RADIUS_KM} km)',
+            'rp_hyperbolic': rp_hyp,
+            'hp_hyperbolic': hp_hyp,
+            'collision': True,
+            'total_delta_v': float('inf'),  # Infinite delta-V for impossible trajectory
+            'orbit_type': 'collision'
+        }
+    
     # Velocity in original hyperbolic trajectory at perigee
     v_hyp_perigee = math.sqrt((1 + e_hyp) * MU_MOON_KMS / rp_hyp)
     
-    # Direct circularization at the natural perigee of the hyperbolic trajectory
-    v_circular_perigee = math.sqrt(MU_MOON_KMS / rp_hyp)
-    delta_v_circularization = v_hyp_perigee - v_circular_perigee  # Deceleration needed
+    # Define target apoapsis altitude
+    TARGET_APOAPSIS_ALTITUDE_KM = 1500  # km
     
-    # Total delta-V (only circularization maneuver needed)
-    total_delta_v = abs(delta_v_circularization)
+    if hp_hyp < TARGET_APOAPSIS_ALTITUDE_KM:
+        # Mode 1: Create elliptical orbit with apoapsis at 1500km
+        # Use natural perigee as perigee, 1500km as apoapsis
+        rp_elliptical = rp_hyp  # Current perigee becomes new perigee  
+        ra_elliptical = MOON_RADIUS_KM + TARGET_APOAPSIS_ALTITUDE_KM  # Apoapsis at 1500km
+        
+        # Calculate elliptical orbit parameters
+        a_elliptical = (rp_elliptical + ra_elliptical) / 2  # Semi-major axis
+        e_elliptical = (ra_elliptical - rp_elliptical) / (ra_elliptical + rp_elliptical)  # Eccentricity
+        
+        # Calculate velocity at perigee of elliptical orbit
+        v_peri_elliptical = math.sqrt(MU_MOON_KMS * (2/rp_elliptical - 1/a_elliptical))
+        
+        # Delta-V calculation at natural perigee
+        delta_v_circularization = v_peri_elliptical - v_hyp_perigee
+        total_delta_v = abs(delta_v_circularization)
+        
+        # Final orbit parameters (elliptical)
+        final_rp = rp_elliptical
+        final_hp = hp_hyp  # Natural perigee altitude
+        final_ra = ra_elliptical
+        final_ha = TARGET_APOAPSIS_ALTITUDE_KM
+        final_velocity = v_peri_elliptical
+        maneuver_altitude = hp_hyp
+        orbit_type = "elliptical"
+        
+    else:
+        # Mode 2: Direct circularization at natural perigee (perigee > 1500km)
+        v_circular_perigee = math.sqrt(MU_MOON_KMS / rp_hyp)
+        delta_v_circularization = v_hyp_perigee - v_circular_perigee  # Deceleration needed
+        total_delta_v = abs(delta_v_circularization)
+        
+        # Final orbit parameters (circular at natural perigee)
+        final_rp = rp_hyp
+        final_hp = hp_hyp
+        final_ra = rp_hyp  # Circular orbit
+        final_ha = hp_hyp
+        final_velocity = v_circular_perigee
+        maneuver_altitude = hp_hyp
+        orbit_type = "circular"
     
     if verbose:
         print("=" * 60)
-        print("HYPERBOLIC TO CIRCULAR TRAJECTORY CONVERSION")
+        print("HYPERBOLIC TO ORBIT CONVERSION")
         print("=" * 60)
         print(f"Current hyperbolic trajectory:")
         print(f"  Perigee radius = {rp_hyp:.0f} km")
@@ -211,41 +278,73 @@ def hyperbolic_to_elliptical_conversion(lunar_results, verbose=True):
         print(f"  Angular momentum = {h_hyp:.0f} km²/sec")
         print(f"  Hyperbolic excess velocity = {lunar_results['v2_kms']:.3f} km/sec")
         
+        print(f"\nDecision logic:")
+        print(f"  Target apoapsis altitude = {TARGET_APOAPSIS_ALTITUDE_KM} km")
+        if hp_hyp < TARGET_APOAPSIS_ALTITUDE_KM:
+            print(f"  Natural perigee ({hp_hyp:.0f} km) < {TARGET_APOAPSIS_ALTITUDE_KM} km → Creating elliptical orbit with apoapsis at {TARGET_APOAPSIS_ALTITUDE_KM} km")
+        else:
+            print(f"  Natural perigee ({hp_hyp:.0f} km) ≥ {TARGET_APOAPSIS_ALTITUDE_KM} km → Circularizing at natural perigee")
+        
         print(f"\nVelocities at perigee:")
         print(f"  Hyperbolic velocity = √(1 + e) √(μm/rp) = {v_hyp_perigee:.3f} km/sec")
-        print(f"  Circular velocity = √(μm/rp) = {v_circular_perigee:.3f} km/sec")
+        print(f"  Target orbit velocity = {final_velocity:.3f} km/sec")
         
-        print(f"\n--- DIRECT CIRCULARIZATION AT PERIGEE ---")
-        print(f"Circularization altitude: {hp_hyp:.0f} km above Moon surface")
-        print(f"Delta-V required: {abs(delta_v_circularization):.3f} km/sec")
-        print(f"Maneuver type: Retrograde burn (deceleration)")
+        print(f"\n--- ORBITAL MANEUVER ---")
+        print(f"Maneuver altitude: {maneuver_altitude:.0f} km above Moon surface")
+        print(f"Delta-V required: {total_delta_v:.3f} km/sec")
+        if delta_v_circularization < 0:
+            print(f"Maneuver type: Retrograde burn (deceleration)")
+        else:
+            print(f"Maneuver type: Prograde burn (acceleration)")
         
-        print(f"\n--- CIRCULAR ORBIT CHARACTERISTICS ---")
-        circular_period = 2 * math.pi * math.sqrt(rp_hyp**3 / MU_MOON_KMS)
-        print(f"  Orbital radius = {rp_hyp:.0f} km")
-        print(f"  Orbital altitude = {hp_hyp:.0f} km above surface")
-        print(f"  Orbital velocity = {v_circular_perigee:.3f} km/sec")
-        print(f"  Orbital period = {circular_period:.0f} seconds = {circular_period/3600:.2f} hours")
+        print(f"\n--- FINAL ORBIT CHARACTERISTICS ({orbit_type.upper()}) ---")
+        if orbit_type == "elliptical":
+            final_period = 2 * math.pi * math.sqrt(((final_rp + final_ra) / 2)**3 / MU_MOON_KMS)
+            print(f"  Perigee radius = {final_rp:.0f} km")
+            print(f"  Perigee altitude = {final_hp:.0f} km above surface")
+            print(f"  Apoapsis radius = {final_ra:.0f} km")
+            print(f"  Apoapsis altitude = {final_ha:.0f} km above surface")
+            print(f"  Eccentricity = {(final_ra - final_rp)/(final_ra + final_rp):.3f}")
+        else:
+            final_period = 2 * math.pi * math.sqrt(final_rp**3 / MU_MOON_KMS)
+            print(f"  Orbital radius = {final_rp:.0f} km")
+            print(f"  Orbital altitude = {final_hp:.0f} km above surface")
+        
+        print(f"  Velocity at perigee = {final_velocity:.3f} km/sec")
+        print(f"  Orbital period = {final_period:.0f} seconds = {final_period/3600:.2f} hours")
         
         print(f"\n--- TOTAL MISSION DELTA-V ---")
         print(f"TOTAL DELTA-V REQUIRED = {total_delta_v:.3f} km/sec")
     
-    # Calculate circular orbit period for completeness
-    circular_period_sec = 2 * math.pi * math.sqrt(rp_hyp**3 / MU_MOON_KMS)
+    # Calculate final orbit period for completeness
+    if orbit_type == "elliptical":
+        final_period_sec = 2 * math.pi * math.sqrt(((final_rp + final_ra) / 2)**3 / MU_MOON_KMS)
+    else:
+        final_period_sec = 2 * math.pi * math.sqrt(final_rp**3 / MU_MOON_KMS)
     
     return {
         'rp_hyperbolic': rp_hyp,
         'hp_hyperbolic': hp_hyp,
         'e_hyperbolic': e_hyp,
         'v_hyp_perigee': v_hyp_perigee,
-        'rp_circular': rp_hyp,  # Circular orbit radius = hyperbolic perigee
-        'hp_circular': hp_hyp,  # Circular orbit altitude = hyperbolic perigee altitude
-        'v_circular': v_circular_perigee,
+        'final_rp': final_rp,
+        'final_hp': final_hp,
+        'final_ra': final_ra,
+        'final_ha': final_ha,
+        'final_velocity': final_velocity,
+        'orbit_type': orbit_type,
         'delta_v_circularization': delta_v_circularization,
         'delta_v_magnitude': abs(delta_v_circularization),
         'total_delta_v': total_delta_v,
-        'circular_period_sec': circular_period_sec,
-        'circular_period_hours': circular_period_sec/3600,
-        'maneuver_altitude_km': hp_hyp,
-        'circularization_altitude_km': hp_hyp
+        'final_period_sec': final_period_sec,
+        'final_period_hours': final_period_sec/3600,
+        'maneuver_altitude_km': maneuver_altitude,
+        'target_apoapsis_altitude_km': TARGET_APOAPSIS_ALTITUDE_KM,
+        # Legacy compatibility fields
+        'rp_circular': final_rp,
+        'hp_circular': final_hp,
+        'v_circular': final_velocity,
+        'circular_period_sec': final_period_sec,
+        'circular_period_hours': final_period_sec/3600,
+        'circularization_altitude_km': final_hp
     }
