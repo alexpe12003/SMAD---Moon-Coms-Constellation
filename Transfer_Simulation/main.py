@@ -100,7 +100,7 @@ def perform_optimal_parameters_calculation():
     # Safe optimal parameters (collision-free from fixed V0 optimization)
     R0 = 1.050      # DU
     V0 = 1.372      # DU/TU
-    gamma0 = 0    # degrees
+    gamma0 = 0.0    # degrees
     lambda1 = 236.4 # degrees
     
     print("Using updated optimal parameters:")
