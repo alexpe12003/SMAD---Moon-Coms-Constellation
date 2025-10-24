@@ -1,0 +1,30 @@
+RK8 Special Case Results: 100 Orbits with 100s Step
+==================================================
+
+Orbital Parameters:
+  semimajor_axis: 70000.0
+  eccentricity: 0.9
+  inclination: 0.0
+  raan: 0.0
+  arg_periapsis: 0.0
+  true_anomaly_0: 0.0
+  r_periapsis: 6999.999999999998
+  r_apoapsis: 133000.0
+  orbital_period: 184313.87955274203
+  mean_motion: 3.408959391678168e-05
+  specific_energy: -2.847146012857143
+
+Simulation Parameters:
+  Method: RK8
+  Step size: 100.0 s
+  Number of orbits: 100
+  Total steps: 184,315
+
+Results:
+  Computation time: 25.209 s
+  Max position error:    9.130e-02 km
+  Final position error:    9.130e-02 km
+  Max velocity error:    7.140e-05 km/s
+  Max energy error:    1.861e-09 km²/s²
+  Max true anomaly error:    1.304e-05 rad (7.472e-04°)
+  Final true anomaly error:    1.304e-05 rad (7.472e-04°)
