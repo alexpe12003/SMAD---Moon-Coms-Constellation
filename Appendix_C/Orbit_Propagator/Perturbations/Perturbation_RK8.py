@@ -443,9 +443,214 @@ def integrate_orbit_b_with_j2(step_size=1.0, num_orbits=10, save_results=True):
 # PLOTTING AND VISUALIZATION
 # =============================================================================
 
+def plot_3d_trajectory(results):
+    """
+    Plot 3D orbit trajectory with J₂ perturbation.
+    
+    Args:
+        results (dict): Results from integrate_orbit_b_with_j2()
+    """
+    state_array = results['state_array']
+    
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection='3d')
+    
+    ax.plot(state_array[:, 0], state_array[:, 1], state_array[:, 2], 'b-', linewidth=0.8)
+    ax.scatter([0], [0], [0], color='blue', s=100, label='Earth')
+    ax.set_xlabel('X [km]')
+    ax.set_ylabel('Y [km]')
+    ax.set_zlabel('Z [km]')
+    ax.set_title('3D Orbit Trajectory with J₂ Perturbation')
+    ax.legend()
+    
+    plt.tight_layout()
+    return fig
+
+def plot_radial_distance(results):
+    """
+    Plot radial distance vs time with perigee passages.
+    
+    Args:
+        results (dict): Results from integrate_orbit_b_with_j2()
+    """
+    time_array = results['time_array']
+    state_array = results['state_array']
+    perigee_times = results['perigee_times']
+    
+    # Convert time to hours
+    time_hours = time_array / 3600
+    perigee_hours = np.array(perigee_times) / 3600
+    
+    # Calculate distances
+    distances = np.sqrt(np.sum(state_array[:, :3]**2, axis=1))
+    
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(time_hours, distances, 'g-', linewidth=1)
+    ax.scatter(perigee_hours, [np.min(distances)] * len(perigee_hours), 
+               color='red', s=30, label='Perigee passages')
+    ax.set_xlabel('Time [h]')
+    ax.set_ylabel('Distance from Earth [km]')
+    ax.set_title('Radial Distance vs Time')
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+    
+    plt.tight_layout()
+    return fig
+
+def plot_perigee_shift(results):
+    """
+    Plot perigee shift due to J₂ with theoretical comparison.
+    
+    Args:
+        results (dict): Results from integrate_orbit_b_with_j2()
+    """
+    argp_values = results['argp_values']
+    
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    if len(argp_values) > 1:
+        argp_deg = np.rad2deg(argp_values)
+        orbit_numbers = range(len(argp_values))
+        
+        # Plot numerical results
+        ax.plot(orbit_numbers, argp_deg, 'ro-', markersize=6, label='Numerical (RK8)')
+        
+        # Plot theoretical prediction
+        theoretical_shift_per_orbit = results['theoretical_shift_per_orbit_deg']
+        theoretical_argp = [argp_deg[0] + i * theoretical_shift_per_orbit for i in orbit_numbers]
+        ax.plot(orbit_numbers, theoretical_argp, 'b--', linewidth=2, label='Theoretical')
+        
+        ax.set_xlabel('Orbit Number')
+        ax.set_ylabel('Argument of Periapsis [°]')
+        ax.set_title('Perigee Shift Due to J₂')
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+    
+    plt.tight_layout()
+    return fig
+
+def plot_orbit_projection(results):
+    """
+    Plot orbit projection in the equatorial plane (X-Y).
+    
+    Args:
+        results (dict): Results from integrate_orbit_b_with_j2()
+    """
+    state_array = results['state_array']
+    
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.plot(state_array[:, 0], state_array[:, 1], 'b-', linewidth=0.8)
+    ax.scatter([0], [0], color='blue', s=100, label='Earth')
+    circle = plt.Circle((0, 0), R_EARTH_EQUATORIAL, fill=False, color='blue', linestyle='--')
+    ax.add_patch(circle)
+    ax.set_xlabel('X [km]')
+    ax.set_ylabel('Y [km]')
+    ax.set_title('Orbit Projection (Equatorial Plane)')
+    ax.axis('equal')
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+    
+    plt.tight_layout()
+    return fig
+
+def plot_velocity_time(results):
+    """
+    Plot velocity magnitude vs time.
+    
+    Args:
+        results (dict): Results from integrate_orbit_b_with_j2()
+    """
+    time_array = results['time_array']
+    state_array = results['state_array']
+    
+    # Convert time to hours
+    time_hours = time_array / 3600
+    
+    # Calculate velocities
+    velocities = np.sqrt(np.sum(state_array[:, 3:]**2, axis=1))
+    
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(time_hours, velocities, 'purple', linewidth=1)
+    ax.set_xlabel('Time [h]')
+    ax.set_ylabel('Velocity [km/s]')
+    ax.set_title('Velocity Magnitude vs Time')
+    ax.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    return fig
+
+def plot_summary_statistics(results):
+    """
+    Create a summary statistics plot.
+    
+    Args:
+        results (dict): Results from integrate_orbit_b_with_j2()
+    """
+    fig, ax = plt.subplots(figsize=(10, 8))
+    ax.axis('off')
+    
+    # Create summary text
+    summary_text = f"""
+J₂ Perturbation Analysis Summary
+{'='*35}
+
+Orbit Parameters:
+• Semi-major axis: {A_ORBIT_B:,.0f} km
+• Eccentricity: {E_ORBIT_B:.3f}  
+• Inclination: {I_ORBIT_B:.1f}°
+
+Integration Parameters:
+• Step size: {results['integration_params']['step_size']:.1f} s
+• Number of orbits: {results['integration_params']['num_orbits']}
+• Total time: {results['integration_params']['integration_time']/3600:.1f} h
+• Data points: {results['integration_params']['num_points']:,}
+
+Perigee Shift Results:
+• Numerical: {results['argp_shift_per_orbit_deg']:.6f}°/orbit
+• Theoretical: {results['theoretical_shift_per_orbit_deg']:.6f}°/orbit
+• Agreement: {results['argp_shift_per_orbit_deg']/results['theoretical_shift_per_orbit_deg']:.3f}
+
+Physical Interpretation:
+J₂ causes systematic precession of the
+argument of periapsis due to Earth's
+oblate shape. Good agreement between
+numerical and theoretical results
+validates the RK8 integration accuracy.
+    """
+    
+    ax.text(0.05, 0.95, summary_text, transform=ax.transAxes, 
+             fontsize=12, verticalalignment='top', fontfamily='monospace')
+    
+    plt.tight_layout()
+    return fig
+
 def plot_results(results):
     """
     Create comprehensive plots of the J₂ perturbation analysis.
+    
+    Args:
+        results (dict): Results from integrate_orbit_b_with_j2()
+        
+    Returns:
+        dict: Dictionary containing all individual figures
+    """
+    figures = {}
+    
+    print("Creating individual plots...")
+    
+    # Create all individual plots
+    figures['trajectory_3d'] = plot_3d_trajectory(results)
+    figures['radial_distance'] = plot_radial_distance(results)
+    figures['perigee_shift'] = plot_perigee_shift(results)
+    figures['orbit_projection'] = plot_orbit_projection(results)
+    figures['velocity_time'] = plot_velocity_time(results)
+    figures['summary'] = plot_summary_statistics(results)
+    
+    return figures
+
+def plot_all_combined(results):
+    """
+    Create the original combined subplot figure.
     
     Args:
         results (dict): Results from integrate_orbit_b_with_j2()
@@ -647,8 +852,18 @@ if __name__ == "__main__":
     )
     
     # Create plots
-    print("Generating plots...")
-    fig = plot_results(results_main)
+    print("Generating individual plots...")
+    figures = plot_results(results_main)
+    
+    # Display each plot individually
+    for plot_name, fig in figures.items():
+        print(f"Displaying {plot_name} plot...")
+        plt.figure(fig.number)  # Bring figure to front
+        plt.show()
+    
+    # Optionally, create the combined plot as well
+    print("Creating combined plot...")
+    combined_fig = plot_all_combined(results_main)
     plt.show()
     
     print("\n" + "="*70)
