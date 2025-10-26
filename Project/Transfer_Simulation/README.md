@@ -1,89 +1,141 @@
-# Lunar Transfer Trajectory Analysis - Organized Structure
+# Lunar Transfer Trajectory Analysis
 
-This project has been reorganized into a modular folder structure for better maintainability and code organization.
+This module provides a comprehensive lunar transfer trajectory analysis system for calculating Earth-Moon transfer trajectories with various optimization capabilities.
 
-## New Project Structure
+## Overview
+
+The Transfer_Simulation module is designed to analyze lunar transfer trajectories using various parameters and optimization techniques. It provides both single calculations and parametric studies to find optimal mission parameters for lunar transfers.
+
+## Features
+
+- **Single Trajectory Calculation**: Calculate a single lunar transfer with user-defined parameters
+- **Parametric Studies**: Analyze lambda1 parameter variations from 0-360 degrees
+- **Optimal Parameters Calculation**: Run calculations with pre-optimized parameters
+- **Multi-Parameter Optimization**: Optimize multiple parameters to minimize mission delta-V
+- **Fixed V0 Optimization**: Optimization with fixed velocity parameters
+
+## Structure
 
 ```
 Transfer_Simulation/
-├── main.py                    # Main application entry point
-├── core/                      # Core functionality
+├── main.py                     # Main application entry point
+├── core/                       # Core interface modules
 │   ├── __init__.py
-│   ├── config.py             # Configuration and constants
-│   └── interface.py          # User interface and I/O functions
-├── operations/               # Calculation modules
+│   ├── interface.py            # User interface and menu system
+│   └── config.py               # Configuration parameters
+├── operations/                 # Mission operations calculations
 │   ├── __init__.py
-│   ├── earth_operations.py   # Earth departure calculations
-│   ├── lunar_operations.py   # Lunar SOI and orbit operations
-│   └── trajectory_calculations.py # Geocentric trajectory analysis
-├── analysis/                 # Analysis and visualization
-│   ├── __init__.py
-│   ├── analysis.py          # Parametric studies and optimization
-│   ├── plotting.py          # Visualization and plotting functions
-│   ├── analyze_asin_error.py # Error analysis tools
-│   └── diagnose_lambda1.py  # Lambda1 diagnostic tools
-├── tests/                   # Test modules
-│   ├── __init__.py
-│   └── test_lunar_ops.py   # Unit tests for lunar operations
-├── legacy/                  # Legacy code
-│   └── Transfer.py         # Original monolithic file
-└── docs/                   # Documentation
-    ├── README.md           # This file
-    └── Lambda1_Failure_Analysis.md
+│   ├── earth_operations.py     # Earth departure calculations
+│   ├── trajectory_calculations.py  # Trajectory computations
+│   └── lunar_operations.py     # Lunar arrival and orbit calculations
+└── analysis/                   # Analysis and optimization tools
+    ├── __init__.py
+    ├── analysis.py             # Parametric studies and analysis
+    ├── plotting.py             # Visualization and plotting
+    └── optimization.py         # Multi-parameter optimization
 ```
-
-## Folder Descriptions
-
-### `core/`
-Contains the fundamental modules that provide configuration and interface functionality:
-- **`config.py`**: Physical constants, mission parameters, conversion factors
-- **`interface.py`**: User input/output functions and menu system
-
-### `operations/`
-Contains the core calculation modules for trajectory analysis:
-- **`earth_operations.py`**: Earth departure delta-V calculations
-- **`lunar_operations.py`**: Lunar SOI entry, transit time, and orbital mechanics
-- **`trajectory_calculations.py`**: Geocentric trajectory analysis
-
-### `analysis/`
-Contains analysis, optimization, and visualization tools:
-- **`analysis.py`**: Parametric studies and optimization algorithms
-- **`plotting.py`**: Plotting and visualization functions
-- **`analyze_asin_error.py`**: Diagnostic tools for mathematical domain errors
-- **`diagnose_lambda1.py`**: Specific diagnostic tools for lambda1 parameter issues
-
-### `tests/`
-Contains unit tests and validation scripts:
-- **`test_lunar_ops.py`**: Unit tests for lunar operations
-
-### `legacy/`
-Contains the original monolithic code for reference:
-- **`Transfer.py`**: Original single-file implementation
-
-### `docs/`
-Contains project documentation and analysis reports:
-- **`README.md`**: This documentation file
-- **`Lambda1_Failure_Analysis.md`**: Detailed analysis of lambda1 parameter issues
 
 ## Usage
 
-The main entry point remains the same:
+### Running the Main Application
 
 ```bash
 python main.py
 ```
 
-The modular structure allows for easier:
-- **Development**: Each module has a specific responsibility
-- **Testing**: Individual modules can be tested in isolation
-- **Maintenance**: Bug fixes and improvements are localized
-- **Extension**: New features can be added without affecting existing code
+The application will present a menu with the following options:
 
-## Import Structure
+1. **Single Calculation**: Perform a single lunar transfer calculation with custom parameters
+2. **Parametric Study**: Run a parametric study of lambda1 values (0-360°)
+3. **Optimal Parameters**: Use pre-calculated optimal parameters for the mission
+4. **Multi-Parameter Optimization**: Optimize V0, gamma0, and lambda1 parameters
+5. **Fixed V0 Optimization**: Optimize with V0 fixed at 1.372 DU/TU
 
-The new modular structure uses relative imports to maintain clean dependencies:
-- Core modules are imported from `core/`
-- Operations are imported from `operations/`
-- Analysis tools are imported from `analysis/`
+### Input Parameters
 
-This organization makes the codebase more professional and easier to navigate while maintaining all existing functionality.
+- **R0**: Initial orbital radius (DU - Distance Units)
+- **V0**: Initial velocity (DU/TU - Distance Units per Time Unit)
+- **gamma0**: Flight path angle at departure (degrees)
+- **lambda1**: True anomaly at lunar SOI entry (degrees)
+
+### Output Results
+
+The system provides comprehensive mission analysis including:
+
+- Earth departure delta-V requirements
+- Geocentric trajectory parameters
+- Lunar SOI entry conditions
+- Lunar orbit insertion parameters
+- Mission duration and timing
+- Visualization plots (for parametric studies)
+
+## Key Functions
+
+### Main Application Functions
+
+- `perform_single_calculation()`: Single trajectory analysis
+- `perform_parametric_study()`: Lambda1 parametric study with plotting
+- `perform_optimal_parameters_calculation()`: Uses optimized parameters
+- `perform_multi_parameter_optimization()`: Full parameter optimization
+- `perform_fixed_v0_optimization()`: Constrained optimization
+
+### Core Modules
+
+- **Interface**: User input/output, menu system, result display
+- **Earth Operations**: Launch and departure calculations
+- **Trajectory Calculations**: Geocentric transfer computations
+- **Lunar Operations**: Lunar SOI and orbit insertion calculations
+- **Analysis**: Parametric studies and optimal parameter finding
+- **Plotting**: Visualization of results and parametric studies
+- **Optimization**: Multi-parameter optimization algorithms
+
+## Dependencies
+
+The system requires the following Python packages:
+- `numpy` - Numerical computations
+- `matplotlib` - Plotting and visualization
+- `scipy` - Optimization algorithms
+- Standard Python libraries: `sys`, `os`, `math`
+
+## Coordinate System and Units
+
+- **Distance Units (DU)**: Earth radii (1 DU = 6,378 km)
+- **Time Units (TU)**: Canonical time units
+- **Velocity Units**: DU/TU
+- **Angles**: Degrees for user interface, radians for calculations
+
+## Optimal Parameters
+
+The system includes pre-calculated optimal parameters from optimization runs:
+
+- **R0**: 1.050 DU
+- **V0**: 1.372 DU/TU
+- **γ0**: 0.0°
+- **λ1**: 236.4°
+
+These parameters provide collision-free trajectories with minimized delta-V requirements.
+
+## Example Workflow
+
+1. Run `python main.py`
+2. Select option from the menu
+3. For single calculations: Enter R0, V0, gamma0, and lambda1 values
+4. For optimization: Specify number of optimization steps
+5. Review comprehensive mission summary with all trajectory parameters
+6. For parametric studies: View generated plots showing parameter relationships
+
+## Notes
+
+- All calculations use canonical units for computational efficiency
+- Results include both dimensional and non-dimensional values
+- The system performs collision detection and warns of potential issues
+- Optimization algorithms use gradient-free methods suitable for aerospace applications
+- Visualization capabilities help understand parameter sensitivities and trade-offs
+
+## Contributing
+
+When modifying the code:
+1. Maintain the modular structure
+2. Update unit tests if available
+3. Ensure compatibility with the main application interface
+4. Document any new parameters or calculation methods
